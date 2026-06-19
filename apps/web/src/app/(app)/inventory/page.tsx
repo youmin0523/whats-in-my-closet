@@ -43,6 +43,8 @@ const COLOR_HEX: Record<string, string> = {
   pink: "#EC4899",
 };
 
+export const metadata = { title: "인벤토리" };
+
 export default async function InventoryPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");

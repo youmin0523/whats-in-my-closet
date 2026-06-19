@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/server/auth";
 import { TryOnForm } from "@/components/tryon-form";
 
+export const metadata = { title: "가상 피팅" };
+
 export default async function TryOnPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");

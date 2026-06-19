@@ -7,6 +7,8 @@ import { StylistChat } from "@/components/stylist-chat";
 import { Button } from "@/components/ui/button";
 import { saveOutfitAction } from "@/server/actions/outfit";
 
+export const metadata = { title: "오늘 코디" };
+
 export default async function TodayPage({
   searchParams,
 }: {

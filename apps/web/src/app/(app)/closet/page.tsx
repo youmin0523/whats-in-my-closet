@@ -50,6 +50,8 @@ const COLORS: [string, string, string][] = [
   ["pink", "핑크", "#EC4899"],
 ];
 
+export const metadata = { title: "내 옷장" };
+
 export default async function ClosetPage({
   searchParams,
 }: {

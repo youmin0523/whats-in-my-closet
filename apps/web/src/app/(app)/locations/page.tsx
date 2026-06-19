@@ -16,6 +16,8 @@ import { ConfirmButton } from "@/components/confirm-button";
 const inputClass =
   "h-10 rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
+export const metadata = { title: "옷 위치" };
+
 export default async function LocationsPage({
   searchParams,
 }: {

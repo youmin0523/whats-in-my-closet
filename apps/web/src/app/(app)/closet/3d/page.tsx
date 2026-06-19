@@ -15,6 +15,8 @@ const PALETTE = [
   "#cb997e",
 ];
 
+export const metadata = { title: "3D 옷장" };
+
 export default async function Closet3DPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");

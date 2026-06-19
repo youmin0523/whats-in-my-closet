@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/server/auth";
 import { CheckForm } from "@/components/check-form";
 
+export const metadata = { title: "중복 확인" };
+
 export default async function CheckPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");

@@ -18,6 +18,8 @@ function UsageBar({ used, total }: { used: number; total: number }) {
   );
 }
 
+export const metadata = { title: "설정" };
+
 export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");

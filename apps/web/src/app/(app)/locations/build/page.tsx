@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/server/auth";
 import { ClosetBuilder } from "@/components/closet-builder";
 
+export const metadata = { title: "옷장 만들기" };
+
 export default async function BuildClosetPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
