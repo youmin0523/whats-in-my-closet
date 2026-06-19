@@ -4,7 +4,15 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { BarChart3, Home, MapPin, Moon, Sparkles, Sun } from "lucide-react";
+import {
+  BarChart3,
+  Home,
+  MapPin,
+  Moon,
+  Plus,
+  Sparkles,
+  Sun,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -13,6 +21,10 @@ const NAV = [
   { href: "/locations", label: "위치", icon: MapPin },
   { href: "/inventory", label: "인벤토리", icon: BarChart3 },
 ];
+
+// mobile bottom tabs put the primary action (옷 추가) in the center
+const ADD = { href: "/closet/add", label: "추가", icon: Plus };
+const MOBILE_NAV = [NAV[0]!, NAV[1]!, ADD, NAV[2]!, NAV[3]!];
 
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -62,21 +74,30 @@ export function AppNav({ children }: { children?: ReactNode }) {
         </div>
       </header>
 
-      {/* mobile bottom tabs */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t bg-background md:hidden">
-        {NAV.map((n) => {
+      {/* mobile bottom tabs — primary action (추가) in the center */}
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t bg-background md:hidden">
+        {MOBILE_NAV.map((n) => {
           const Icon = n.icon;
+          const isAdd = n.href === ADD.href;
           return (
             <Link
               key={n.href}
               href={n.href}
               className={cn(
                 "flex flex-col items-center gap-0.5 py-2 text-xs",
-                isActive(n.href) ? "text-primary" : "text-muted-foreground",
+                !isAdd && isActive(n.href)
+                  ? "text-primary"
+                  : "text-muted-foreground",
               )}
             >
-              <Icon className="size-5" />
-              <span>{n.label}</span>
+              {isAdd ? (
+                <span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  <Icon className="size-4" />
+                </span>
+              ) : (
+                <Icon className="size-5" />
+              )}
+              <span className={cn(isAdd && "text-primary")}>{n.label}</span>
             </Link>
           );
         })}
