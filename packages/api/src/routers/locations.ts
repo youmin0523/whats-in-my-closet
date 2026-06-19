@@ -62,6 +62,60 @@ export const locationsRouter = createTRPCRouter({
       return c;
     }),
 
+  /**
+   * Build a closet from a user-composed **elevation** (앞에서 본 면): an array of
+   * columns (left→right), each a stack of cells top→bottom. Each cell becomes a
+   * container with a {col,row} position + type — which the 2D map renders as the
+   * elevation and the 3D view extrudes into a wardrobe. (입면 → 2D·3D 자동 생성)
+   */
+  buildCloset: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(40),
+        sections: z
+          .array(
+            z.array(
+              z.object({
+                type: z.enum(["shelf", "rod", "drawer", "cell"]),
+                label: z.string().max(20).optional(),
+              }),
+            ),
+          )
+          .min(1)
+          .max(6),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = getDb();
+      const [closet] = await db
+        .insert(closets)
+        .values({
+          userId: ctx.user.id,
+          name: input.name,
+          layout: input.sections,
+        })
+        .returning();
+      if (!closet) throw new Error("Failed to create closet");
+
+      const KO: Record<string, string> = {
+        shelf: "선반",
+        rod: "행거",
+        drawer: "서랍",
+        cell: "칸",
+      };
+      const rows = input.sections.flatMap((cells, col) =>
+        cells.map((cell, row) => ({
+          closetId: closet.id,
+          type: cell.type,
+          name: cell.label?.trim() || `${col + 1}열 ${KO[cell.type]}${row + 1}`,
+          position: { col, row },
+          sort: col * 100 + row,
+        })),
+      );
+      if (rows.length) await db.insert(containers).values(rows);
+      return closet;
+    }),
+
   assign: protectedProcedure
     .input(
       z.object({
@@ -160,6 +214,7 @@ export const locationsRouter = createTRPCRouter({
             id: ct.id,
             name: ct.name,
             type: ct.type,
+            position: ct.position as { col: number; row: number } | null,
             garments: byContainer.get(ct.id) ?? [],
           })),
       })),

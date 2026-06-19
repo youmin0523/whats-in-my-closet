@@ -8,6 +8,8 @@ node_modules/
 dist/
 build/
 out/
+# ...but keep app-router route segments literally named "build" (e.g. /locations/build)
+!apps/web/src/app/**/build/
 
 # Test artifacts
 coverage/

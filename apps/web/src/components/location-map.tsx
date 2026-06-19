@@ -14,6 +14,7 @@ type Container = {
   id: number;
   name: string;
   type: string | null;
+  position: { col: number; row: number } | null;
   garments: Item[];
 };
 type Closet = {
@@ -26,7 +27,6 @@ export type MapData = { closets: Closet[]; unassigned: Item[] };
 
 export function LocationMap({ data }: { data: MapData }) {
   const [pending, start] = useTransition();
-  // Tap-to-move (mobile-friendly): tap a garment to select, then tap a cell.
   const [selected, setSelected] = useState<number | null>(null);
 
   const move = (
@@ -38,7 +38,6 @@ export function LocationMap({ data }: { data: MapData }) {
     start(() => moveGarment(id, closetId, containerId));
     setSelected(null);
   };
-
   const onDrop =
     (closetId: number | null, containerId: number | null) =>
     (e: React.DragEvent) => {
@@ -73,71 +72,119 @@ export function LocationMap({ data }: { data: MapData }) {
       {!hasClosets && (
         <p className="rounded-md border bg-secondary/40 p-4 text-sm text-muted-foreground">
           아직 옷장이 없어요.{" "}
-          <a href="/locations" className="text-primary hover:opacity-80">
-            위치 관리
+          <a href="/locations/build" className="text-primary hover:opacity-80">
+            입면으로 옷장 만들기
           </a>
-          에서 옷장과 칸(서랍·박스)을 먼저 추가하세요.
+          로 옷장 모양을 짜면 여기에 배치도가 그려져요.
         </p>
       )}
 
-      {data.closets.map((c) => (
-        <section key={c.id} className="rounded-xl border bg-card p-4">
-          <h3 className="font-medium tracking-tight">{c.name}</h3>
+      {data.closets.map((c) => {
+        // Group positioned containers into elevation columns; legacy ones flat.
+        const positioned = c.containers.filter((ct) => ct.position);
+        const flat = c.containers.filter((ct) => !ct.position);
+        const cols = new Map<number, Container[]>();
+        for (const ct of positioned) {
+          const k = ct.position!.col;
+          (cols.get(k) ?? cols.set(k, []).get(k)!).push(ct);
+        }
+        const colKeys = [...cols.keys()].sort((a, b) => a - b);
 
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {c.containers.map((ct) => (
-              <DropCell
-                key={ct.id}
-                title={ct.name}
-                hint={ct.type ?? "칸"}
-                count={ct.garments.length}
-                armed={armed}
-                onDrop={onDrop(c.id, ct.id)}
-                onTap={onTap(c.id, ct.id)}
-              >
-                {ct.garments.map((g) => (
-                  <Thumb
-                    key={g.garmentId}
-                    g={g}
-                    selected={selected === g.garmentId}
-                    onSelect={toggle}
-                  />
+        return (
+          <section key={c.id} className="rounded-xl border bg-card p-4">
+            <h3 className="font-medium tracking-tight">{c.name}</h3>
+
+            {colKeys.length > 0 && (
+              <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
+                {colKeys.map((col) => (
+                  <div
+                    key={col}
+                    className="flex min-w-[120px] flex-1 flex-col gap-1.5 rounded-lg border bg-background/40 p-1.5"
+                  >
+                    {cols
+                      .get(col)!
+                      .sort((a, b) => a.position!.row - b.position!.row)
+                      .map((ct) => (
+                        <ElevCell
+                          key={ct.id}
+                          ct={ct}
+                          armed={armed}
+                          onDrop={onDrop(c.id, ct.id)}
+                          onTap={onTap(c.id, ct.id)}
+                        >
+                          {ct.garments.map((g) => (
+                            <Thumb
+                              key={g.garmentId}
+                              g={g}
+                              selected={selected === g.garmentId}
+                              onSelect={toggle}
+                            />
+                          ))}
+                        </ElevCell>
+                      ))}
+                  </div>
                 ))}
-              </DropCell>
-            ))}
+              </div>
+            )}
 
-            <DropCell
-              title="이 옷장"
-              hint="칸 미지정"
-              count={c.loose.length}
-              armed={armed}
-              onDrop={onDrop(c.id, null)}
-              onTap={onTap(c.id, null)}
-            >
-              {c.loose.map((g) => (
-                <Thumb
-                  key={g.garmentId}
-                  g={g}
-                  selected={selected === g.garmentId}
-                  onSelect={toggle}
-                />
-              ))}
-            </DropCell>
-          </div>
+            {(flat.length > 0 || colKeys.length === 0) && (
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {flat.map((ct) => (
+                  <DropCell
+                    key={ct.id}
+                    title={ct.name}
+                    hint={ct.type ?? "칸"}
+                    count={ct.garments.length}
+                    armed={armed}
+                    onDrop={onDrop(c.id, ct.id)}
+                    onTap={onTap(c.id, ct.id)}
+                  >
+                    {ct.garments.map((g) => (
+                      <Thumb
+                        key={g.garmentId}
+                        g={g}
+                        selected={selected === g.garmentId}
+                        onSelect={toggle}
+                      />
+                    ))}
+                  </DropCell>
+                ))}
+                <DropCell
+                  title="이 옷장"
+                  hint="칸 미지정"
+                  count={c.loose.length}
+                  armed={armed}
+                  onDrop={onDrop(c.id, null)}
+                  onTap={onTap(c.id, null)}
+                >
+                  {c.loose.map((g) => (
+                    <Thumb
+                      key={g.garmentId}
+                      g={g}
+                      selected={selected === g.garmentId}
+                      onSelect={toggle}
+                    />
+                  ))}
+                </DropCell>
+              </div>
+            )}
 
-          {c.containers.length === 0 && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              칸이 없어요 —{" "}
-              <a href="/locations" className="text-primary hover:opacity-80">
-                위치 관리
-              </a>
-              에서 서랍·박스를 추가하면 칸별로 배치할 수 있어요.
-            </p>
-          )}
-        </section>
-      ))}
+            {c.containers.length === 0 && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                칸이 없어요 —{" "}
+                <a
+                  href="/locations/build"
+                  className="text-primary hover:opacity-80"
+                >
+                  입면으로 옷장 만들기
+                </a>
+                에서 구조를 짜보세요.
+              </p>
+            )}
+          </section>
+        );
+      })}
 
-      {/* unassigned tray */}
       <DropCell
         title="미분류"
         hint="아직 위치가 없는 옷 — 드래그하거나, 탭해서 칸을 고르세요"
@@ -160,6 +207,52 @@ export function LocationMap({ data }: { data: MapData }) {
           ))
         )}
       </DropCell>
+    </div>
+  );
+}
+
+/** An elevation cell — styled by container type (행거/선반/서랍/칸). */
+function ElevCell({
+  ct,
+  armed,
+  onDrop,
+  onTap,
+  children,
+}: {
+  ct: Container;
+  armed: boolean;
+  onDrop: (e: React.DragEvent) => void;
+  onTap: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={onDrop}
+      onClick={onTap}
+      className={cn(
+        "relative min-h-[58px] rounded-md border bg-secondary/30 p-1.5 transition-colors hover:border-primary/50",
+        armed && "cursor-pointer border-primary/50 bg-primary/5",
+      )}
+    >
+      {ct.type === "rod" && (
+        <div className="absolute inset-x-2 top-1 h-0.5 rounded bg-foreground/25" />
+      )}
+      {ct.type === "shelf" && (
+        <div className="absolute inset-x-1 bottom-0.5 h-1 rounded bg-foreground/20" />
+      )}
+      {ct.type === "drawer" && (
+        <div className="absolute inset-x-3 top-1/2 h-0.5 -translate-y-1/2 rounded bg-foreground/20" />
+      )}
+      <div className="mb-1 flex items-baseline justify-between">
+        <span className="truncate text-[11px] text-muted-foreground">
+          {ct.name}
+        </span>
+        <span className="text-[10px] tabular-nums text-muted-foreground">
+          {ct.garments.length}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1">{children}</div>
     </div>
   );
 }
@@ -194,13 +287,13 @@ function Thumb({
         <Image
           src={g.thumbnailUrl}
           alt={g.name ?? "옷"}
-          width={48}
-          height={48}
-          className="size-12 rounded-md border bg-background object-contain p-0.5"
+          width={40}
+          height={40}
+          className="size-10 rounded-md border bg-background object-contain p-0.5"
           draggable={false}
         />
       ) : (
-        <div className="size-12 rounded-md border bg-muted" />
+        <div className="size-10 rounded-md border bg-muted" />
       )}
     </button>
   );
@@ -231,9 +324,9 @@ function DropCell({
       onDrop={onDrop}
       onClick={onTap}
       className={cn(
-        "min-h-[96px] rounded-lg border border-dashed bg-background/60 p-2.5 transition-colors hover:border-primary/50 hover:bg-accent/40",
+        "min-h-[88px] rounded-lg border border-dashed bg-background/60 p-2.5 transition-colors hover:border-primary/50 hover:bg-accent/40",
         armed && "cursor-pointer border-primary/50 bg-primary/5",
-        wide && "sm:min-h-[120px]",
+        wide && "sm:min-h-[110px]",
       )}
     >
       <div className="mb-1.5 flex items-baseline justify-between gap-2">

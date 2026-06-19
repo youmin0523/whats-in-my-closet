@@ -23,10 +23,18 @@ export default async function Closet3DPage() {
   const rows = dbConfigured ? await api.garments.scene3d().catch(() => []) : [];
 
   // Group garments by closet → container; unplaced items go to `loose`.
+  type Bin = {
+    id: number;
+    name: string;
+    items: Item3D[];
+    type?: string | null;
+    col?: number | null;
+    row?: number | null;
+  };
   type Acc = {
     id: number;
     name: string;
-    bins: Map<number, { id: number; name: string; items: Item3D[] }>;
+    bins: Map<number, Bin>;
     looseItems: Item3D[];
   };
   const unitMap = new Map<number, Acc>();
@@ -58,7 +66,15 @@ export default async function Closet3DPage() {
     }
     let b = u.bins.get(r.containerId);
     if (!b) {
-      b = { id: r.containerId, name: r.containerName ?? "칸", items: [] };
+      const pos = r.containerPosition as { col: number; row: number } | null;
+      b = {
+        id: r.containerId,
+        name: r.containerName ?? "칸",
+        items: [],
+        type: r.containerType,
+        col: pos?.col ?? null,
+        row: pos?.row ?? null,
+      };
       u.bins.set(r.containerId, b);
     }
     b.items.push(item);

@@ -119,6 +119,15 @@ export default async function LocationsPage({
       {/* closets + containers */}
       <div className="mt-12 border-t pt-8">
         <h2 className="text-lg font-semibold tracking-tight">내 옷장 · 수납</h2>
+        <Link
+          href="/locations/build"
+          className="mt-3 inline-flex items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+        >
+          입면으로 옷장 만들기 →
+          <span className="text-xs font-normal text-muted-foreground">
+            2D·3D 자동 생성
+          </span>
+        </Link>
 
         <div className="mt-4 flex flex-col gap-4">
           {closets.map((c, ci) => (

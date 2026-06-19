@@ -375,6 +375,8 @@ export const garmentsRouter = createTRPCRouter({
         closetName: closets.name,
         containerId: garmentLocations.containerId,
         containerName: containers.name,
+        containerType: containers.type,
+        containerPosition: containers.position,
       })
       .from(garments)
       .leftJoin(
