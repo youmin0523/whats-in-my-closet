@@ -84,7 +84,7 @@ pnpm --filter web build
 위치 시스템. AI 파이프라인은 `packages/api/src/services/*`(cloudinary 외 detection/tagging/embeddings/color)부터.
 
 ## 위생 (선택)
-- **git 초기화**: 아직 repo 아님. `git init` + 첫 커밋 권장(`.gitignore` 준비됨, 업로드/.env 제외).
+- **git**: ✅ 초기화·푸시됨 → https://github.com/youmin0523/whats-in-my-closet (main). `.gitignore`가 `.env`·업로드·`node_modules`·로컬설정 제외. 키 넣을 때 만들 `.env`는 자동 제외됨.
 - **pre-commit**: `pnpm add -Dw husky lint-staged` → `npx husky init` → 훅에서 `pnpm test`.
 
 ## 테스트 규율 (요청 반영)
