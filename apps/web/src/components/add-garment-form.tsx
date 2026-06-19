@@ -108,9 +108,41 @@ export function AddGarmentForm({ taxonomy = [] }: { taxonomy?: Cat[] }) {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={state.imageUrl}
-              alt="업로드한 옷"
+              alt="방금 올린 옷"
               className="mt-3 aspect-square w-full rounded-md border bg-background object-contain p-2"
             />
+          )}
+
+          {/* informational — you decide whether the new piece earns its place */}
+          {state.similar && state.similar.length > 0 && (
+            <div className="mt-4 border-t pt-3">
+              <p className="mb-2 text-sm font-medium text-foreground">
+                옷장에 있는 비슷한 옷
+              </p>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {state.similar.map((m) => (
+                  <a
+                    key={m.garmentId}
+                    href={`/closet/${m.garmentId}`}
+                    className="group block rounded-md border bg-background/70 p-1.5 transition-colors hover:border-foreground/30"
+                  >
+                    {m.thumbnailUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={m.thumbnailUrl}
+                        alt={m.name ?? "비슷한 옷"}
+                        className="aspect-square w-full rounded bg-background object-contain"
+                      />
+                    ) : (
+                      <div className="aspect-square w-full rounded bg-muted" />
+                    )}
+                    <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                      {m.name ?? "이름 없음"}
+                    </p>
+                  </a>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}

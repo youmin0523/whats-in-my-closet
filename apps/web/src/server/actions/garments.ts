@@ -42,6 +42,12 @@ export type AddGarmentState = {
   message: string;
   imageUrl?: string;
   persisted?: boolean;
+  // non-blocking: "you already own similar ones" — informs, never blocks
+  similar?: {
+    garmentId: number;
+    name: string | null;
+    thumbnailUrl: string | null;
+  }[];
 };
 
 /** Upload an image and (when a DB is configured) persist it as a garment. */
@@ -75,7 +81,7 @@ export async function addGarmentAction(
   }
 
   try {
-    await api.garments.create({
+    const created = await api.garments.create({
       imageUrl: uploaded.url,
       bgRemovedUrl: uploaded.bgRemovedUrl,
       cloudinaryPublicId: uploaded.publicId,
@@ -86,11 +92,35 @@ export async function addGarmentAction(
       season: seasonArr.length ? seasonArr : undefined,
       status: wishlist ? "wishlist" : undefined,
     });
+
+    // Surface "you already own similar ones" — reuses the embedding just stored
+    // (a cheap vector search, no re-embed), so it adds ~no latency. Non-blocking.
+    let similar: NonNullable<AddGarmentState["similar"]> = [];
+    try {
+      const res = await api.similarity.similarTo({
+        garmentId: created.id,
+        limit: 4,
+      });
+      similar = res.matches
+        .filter((m) => m.similarity >= 0.8)
+        .map((m) => ({
+          garmentId: m.garmentId,
+          name: m.name,
+          thumbnailUrl: m.thumbnailUrl,
+        }));
+    } catch {
+      // similarity is best-effort; never block the add on it
+    }
+
+    const base = wishlist ? "위시리스트에 담았어요." : "옷장에 추가했어요.";
     return {
       status: "ok",
       persisted: true,
       imageUrl: uploaded.url,
-      message: wishlist ? "위시리스트에 담았어요." : "옷장에 추가했어요.",
+      similar,
+      message: similar.length
+        ? `${base} 비슷한 옷이 이미 ${similar.length}벌 있어요.`
+        : base,
     };
   } catch {
     return {
