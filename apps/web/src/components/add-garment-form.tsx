@@ -71,6 +71,12 @@ export function AddGarmentForm({ taxonomy = [] }: { taxonomy?: Cat[] }) {
           </div>
         )}
 
+        {taxonomy.length > 0 && (
+          <p className="-mt-1 text-xs text-muted-foreground">
+            비워두면 사진을 보고 AI가 분류해줘요. 나중에 언제든 고칠 수 있어요.
+          </p>
+        )}
+
         <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
           {SEASONS.map(([val, label]) => (
             <label key={val} className="flex items-center gap-1.5">

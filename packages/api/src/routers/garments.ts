@@ -11,6 +11,7 @@ import {
   garmentLocations,
   garments,
   getDb,
+  subcategories,
   subscriptions,
   wearLogs,
 } from "@closet/db";
@@ -18,9 +19,11 @@ import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { hexToColorFamily, hexToLab } from "../lib/color";
 import { DEFAULT_PLAN, itemAllowance } from "../lib/plan-limits";
 import { buildProductQuery } from "../lib/enrichment-query";
+import { buildTaxonomyHint, resolveTaxonomy } from "../lib/taxonomy";
 import { EMBEDDING_MODEL, getEmbeddingService } from "../services/embeddings";
 import { getEnrichmentService } from "../services/enrichment";
 import { getTagReaderService } from "../services/tag-reader";
+import { getTaggingService } from "../services/tagging";
 
 const colorInput = z
   .array(z.object({ hex: z.string(), population: z.number().optional() }))
@@ -185,18 +188,49 @@ export const garmentsRouter = createTRPCRouter({
         }
       }
 
+      // Kick off the embedding now so it runs *concurrently* with auto-tagging
+      // below — total latency ≈ max(embed, tag), not the sum.
+      const embedPromise = getEmbeddingService()
+        .embed(input.imageUrl)
+        .catch(() => null);
+
+      // Auto-tag when the user left the category blank: AI fills
+      // category/subcategory/season/name (all editable later on the detail
+      // page). Skipped when a category was provided or no model key is set, so
+      // the fast path stays fast.
+      let { name, categoryId, subcategoryId, season } = input;
+      if (categoryId == null) {
+        const tagging = getTaggingService();
+        if (tagging.isReal) {
+          const [cats, subs] = await Promise.all([
+            db.select().from(categories),
+            db.select().from(subcategories),
+          ]);
+          const tags = await tagging
+            .tag(input.imageUrl, buildTaxonomyHint(cats, subs))
+            .catch(() => null);
+          if (tags) {
+            const r = resolveTaxonomy(cats, subs, tags.category, tags.subcategory);
+            categoryId = r.categoryId ?? undefined;
+            subcategoryId = subcategoryId ?? r.subcategoryId ?? undefined;
+            if (!season?.length && tags.season?.length) season = tags.season;
+            if (!name && tags.name) name = tags.name;
+          }
+        }
+      }
+
       const [created] = await db
         .insert(garments)
         .values({
           userId: ctx.user.id,
-          name: input.name,
+          name,
           brand: input.brand,
           size: input.size,
           material: input.material,
           purchasePrice: input.purchasePrice,
-          categoryId: input.categoryId,
-          subcategoryId: input.subcategoryId,
-          season: input.season,
+          categoryId,
+          subcategoryId,
+          season,
           source: "single_capture",
           status: input.status ?? "active",
           thumbnailUrl: input.imageUrl,
@@ -231,14 +265,17 @@ export const garmentsRouter = createTRPCRouter({
         );
       }
 
-      // Fashion embedding (powers duplicate detection). Non-fatal on failure.
-      try {
-        const embedding = await getEmbeddingService().embed(input.imageUrl);
-        await db
-          .insert(garmentEmbeddings)
-          .values({ garmentId: created.id, embedding, model: EMBEDDING_MODEL });
-      } catch {
-        // ignore — embedding can be backfilled later
+      // Fashion embedding (powers duplicate detection) — started above, awaited
+      // here so it overlapped the tagging call. Non-fatal on failure.
+      const embedding = await embedPromise;
+      if (embedding) {
+        try {
+          await db
+            .insert(garmentEmbeddings)
+            .values({ garmentId: created.id, embedding, model: EMBEDDING_MODEL });
+        } catch {
+          // ignore — embedding can be backfilled later
+        }
       }
 
       return created;
