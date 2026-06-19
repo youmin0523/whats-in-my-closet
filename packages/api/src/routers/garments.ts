@@ -1,17 +1,22 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { and, arrayContains, desc, eq, sql } from "drizzle-orm";
 import {
   categories,
+  closets,
+  containers,
   garmentColors,
   garmentEmbeddings,
   garmentImages,
   garmentLocations,
   garments,
   getDb,
+  subscriptions,
   wearLogs,
 } from "@closet/db";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { hexToColorFamily, hexToLab } from "../lib/color";
+import { DEFAULT_PLAN, itemAllowance } from "../lib/plan-limits";
 import { buildProductQuery } from "../lib/enrichment-query";
 import { EMBEDDING_MODEL, getEmbeddingService } from "../services/embeddings";
 import { getEnrichmentService } from "../services/enrichment";
@@ -152,6 +157,34 @@ export const garmentsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const db = getDb();
+
+      // Freemium: enforce the plan's item cap (free = 100). Wishlist items don't
+      // count toward the active wardrobe.
+      if ((input.status ?? "active") !== "wishlist") {
+        const [sub] = await db
+          .select()
+          .from(subscriptions)
+          .where(eq(subscriptions.userId, ctx.user.id));
+        const planSlug =
+          sub && sub.status !== "canceled" ? sub.planSlug : DEFAULT_PLAN;
+        const [cnt] = await db
+          .select({ n: sql<number>`count(*)::int` })
+          .from(garments)
+          .where(
+            and(
+              eq(garments.userId, ctx.user.id),
+              eq(garments.status, "active"),
+            ),
+          );
+        if (!itemAllowance(planSlug, cnt?.n ?? 0).allowed) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message:
+              "보관 한도에 도달했어요. 요금제를 업그레이드하면 옷을 무제한으로 보관할 수 있어요.",
+          });
+        }
+      }
+
       const [created] = await db
         .insert(garments)
         .values({
@@ -324,5 +357,39 @@ export const garmentsRouter = createTRPCRouter({
         and(eq(garments.userId, ctx.user.id), eq(garments.status, "active")),
       )
       .limit(60);
+  }),
+
+  /**
+   * Active garments tagged with their physical location (closet + container) and
+   * dominant color — powers the location-based 3D closet (Phase 6). Items with no
+   * location come back with null closet/container (rendered as a "미분류" rack).
+   */
+  scene3d: protectedProcedure.query(async ({ ctx }) => {
+    const db = getDb();
+    return db
+      .select({
+        id: garments.id,
+        name: garments.name,
+        hex: garmentColors.hex,
+        closetId: garmentLocations.closetId,
+        closetName: closets.name,
+        containerId: garmentLocations.containerId,
+        containerName: containers.name,
+      })
+      .from(garments)
+      .leftJoin(
+        garmentColors,
+        and(
+          eq(garmentColors.garmentId, garments.id),
+          eq(garmentColors.rank, 0),
+        ),
+      )
+      .leftJoin(garmentLocations, eq(garmentLocations.garmentId, garments.id))
+      .leftJoin(closets, eq(closets.id, garmentLocations.closetId))
+      .leftJoin(containers, eq(containers.id, garmentLocations.containerId))
+      .where(
+        and(eq(garments.userId, ctx.user.id), eq(garments.status, "active")),
+      )
+      .limit(300);
   }),
 });

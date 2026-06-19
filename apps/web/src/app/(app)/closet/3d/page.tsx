@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { api } from "@/server/api";
 import { auth } from "@/server/auth";
-import { Closet3D, type Item3D } from "@/components/closet-3d";
+import { Closet3D, type Item3D, type Unit3D } from "@/components/closet-3d";
 
 const PALETTE = [
   "#5e6a4c",
@@ -20,21 +20,72 @@ export default async function Closet3DPage() {
   if (!session?.user) redirect("/login");
 
   const dbConfigured = !!process.env.DATABASE_URL;
-  const garments = dbConfigured
-    ? await api.garments.list3d().catch(() => [])
-    : [];
+  const rows = dbConfigured ? await api.garments.scene3d().catch(() => []) : [];
 
-  const items: Item3D[] = garments.length
-    ? garments.map((g, i) => ({
-        id: g.id,
-        label: g.name ?? "옷",
-        color: g.hex ?? PALETTE[i % PALETTE.length]!,
-      }))
-    : Array.from({ length: 12 }, (_, i) => ({
-        id: -1 - i,
-        label: "데모",
-        color: PALETTE[i % PALETTE.length]!,
-      }));
+  // Group garments by closet → container; unplaced items go to `loose`.
+  type Acc = {
+    id: number;
+    name: string;
+    bins: Map<number, { id: number; name: string; items: Item3D[] }>;
+    looseItems: Item3D[];
+  };
+  const unitMap = new Map<number, Acc>();
+  const loose: Item3D[] = [];
+
+  rows.forEach((r, i) => {
+    const item: Item3D = {
+      id: r.id,
+      label: r.name ?? "옷",
+      color: r.hex ?? PALETTE[i % PALETTE.length]!,
+    };
+    if (r.closetId == null) {
+      loose.push(item);
+      return;
+    }
+    let u = unitMap.get(r.closetId);
+    if (!u) {
+      u = {
+        id: r.closetId,
+        name: r.closetName ?? "옷장",
+        bins: new Map(),
+        looseItems: [],
+      };
+      unitMap.set(r.closetId, u);
+    }
+    if (r.containerId == null) {
+      u.looseItems.push(item);
+      return;
+    }
+    let b = u.bins.get(r.containerId);
+    if (!b) {
+      b = { id: r.containerId, name: r.containerName ?? "칸", items: [] };
+      u.bins.set(r.containerId, b);
+    }
+    b.items.push(item);
+  });
+
+  const units: Unit3D[] = [...unitMap.values()].map((u) => ({
+    id: u.id,
+    name: u.name,
+    bins: [
+      ...u.bins.values(),
+      ...(u.looseItems.length
+        ? [{ id: -u.id - 1000, name: "기타", items: u.looseItems }]
+        : []),
+    ],
+  }));
+
+  // Demo fallback when there's nothing yet.
+  const looseOrDemo: Item3D[] =
+    units.length === 0 && loose.length === 0
+      ? Array.from({ length: 12 }, (_, i) => ({
+          id: -1 - i,
+          label: "데모",
+          color: PALETTE[i % PALETTE.length]!,
+        }))
+      : loose;
+
+  const hasData = units.length > 0 || loose.length > 0;
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12 md:px-10">
@@ -46,20 +97,23 @@ export default async function Closet3DPage() {
           </h1>
         </div>
         <Link
-          href="/inventory"
+          href="/locations/map"
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          ← 인벤토리
+          2D 배치도 →
         </Link>
       </div>
 
       <div className="mt-8">
-        <Closet3D items={items} />
+        <Closet3D units={units} loose={looseOrDemo} />
       </div>
       <p className="mt-3 text-sm text-muted-foreground">
         드래그로 돌려보고, 스크롤로 확대·축소하세요.
-        {!garments.length &&
-          " (지금은 예시 — 옷을 등록하면 내 옷들이 위치대로 배치됩니다.)"}
+        {units.length > 0
+          ? " 옷장·칸별로 실제 위치에 배치돼 있어요."
+          : hasData
+            ? " 위치를 지정하면 옷장·칸별로 배치됩니다. (지금은 한 칸에 모아 표시)"
+            : " (지금은 예시 — 옷을 등록하고 위치를 지정하면 옷장·칸별로 배치됩니다.)"}
       </p>
     </div>
   );

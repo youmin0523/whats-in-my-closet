@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { moveGarment } from "@/server/actions/location-map";
 import { cn } from "@/lib/utils";
 
@@ -25,19 +25,50 @@ export type MapData = { closets: Closet[]; unassigned: Item[] };
 
 export function LocationMap({ data }: { data: MapData }) {
   const [pending, start] = useTransition();
+  // Tap-to-move (mobile-friendly): tap a garment to select, then tap a cell.
+  const [selected, setSelected] = useState<number | null>(null);
 
-  const dropTo =
+  const move = (
+    closetId: number | null,
+    containerId: number | null,
+    id: number,
+  ) => {
+    if (!id) return;
+    start(() => moveGarment(id, closetId, containerId));
+    setSelected(null);
+  };
+
+  const onDrop =
     (closetId: number | null, containerId: number | null) =>
     (e: React.DragEvent) => {
       e.preventDefault();
-      const id = Number(e.dataTransfer.getData("text/plain"));
-      if (id) start(() => moveGarment(id, closetId, containerId));
+      move(closetId, containerId, Number(e.dataTransfer.getData("text/plain")));
     };
+  const onTap =
+    (closetId: number | null, containerId: number | null) => () => {
+      if (selected != null) move(closetId, containerId, selected);
+    };
+  const toggle = (id: number) =>
+    setSelected((prev) => (prev === id ? null : id));
 
+  const armed = selected != null;
   const hasClosets = data.closets.length > 0;
 
   return (
     <div className={cn("flex flex-col gap-6", pending && "opacity-70")}>
+      {armed && (
+        <p className="sticky top-16 z-10 rounded-md border border-primary/50 bg-primary/10 p-2.5 text-center text-sm font-medium">
+          옮길 칸을 탭하세요 ·{" "}
+          <button
+            type="button"
+            onClick={() => setSelected(null)}
+            className="underline"
+          >
+            취소
+          </button>
+        </p>
+      )}
+
       {!hasClosets && (
         <p className="rounded-md border bg-secondary/40 p-4 text-sm text-muted-foreground">
           아직 옷장이 없어요.{" "}
@@ -59,23 +90,36 @@ export function LocationMap({ data }: { data: MapData }) {
                 title={ct.name}
                 hint={ct.type ?? "칸"}
                 count={ct.garments.length}
-                onDrop={dropTo(c.id, ct.id)}
+                armed={armed}
+                onDrop={onDrop(c.id, ct.id)}
+                onTap={onTap(c.id, ct.id)}
               >
                 {ct.garments.map((g) => (
-                  <Thumb key={g.garmentId} g={g} />
+                  <Thumb
+                    key={g.garmentId}
+                    g={g}
+                    selected={selected === g.garmentId}
+                    onSelect={toggle}
+                  />
                 ))}
               </DropCell>
             ))}
 
-            {/* closet-level (no specific container) */}
             <DropCell
               title="이 옷장"
               hint="칸 미지정"
               count={c.loose.length}
-              onDrop={dropTo(c.id, null)}
+              armed={armed}
+              onDrop={onDrop(c.id, null)}
+              onTap={onTap(c.id, null)}
             >
               {c.loose.map((g) => (
-                <Thumb key={g.garmentId} g={g} />
+                <Thumb
+                  key={g.garmentId}
+                  g={g}
+                  selected={selected === g.garmentId}
+                  onSelect={toggle}
+                />
               ))}
             </DropCell>
           </div>
@@ -86,7 +130,7 @@ export function LocationMap({ data }: { data: MapData }) {
               <a href="/locations" className="text-primary hover:opacity-80">
                 위치 관리
               </a>
-              에서 서랍·박스를 추가하면 여기에 칸별로 배치할 수 있어요.
+              에서 서랍·박스를 추가하면 칸별로 배치할 수 있어요.
             </p>
           )}
         </section>
@@ -95,30 +139,55 @@ export function LocationMap({ data }: { data: MapData }) {
       {/* unassigned tray */}
       <DropCell
         title="미분류"
-        hint="아직 위치가 없는 옷 — 위 칸으로 끌어다 놓으세요"
+        hint="아직 위치가 없는 옷 — 드래그하거나, 탭해서 칸을 고르세요"
         count={data.unassigned.length}
-        onDrop={dropTo(null, null)}
+        armed={armed}
+        onDrop={onDrop(null, null)}
+        onTap={onTap(null, null)}
         wide
       >
         {data.unassigned.length === 0 ? (
           <p className="text-xs text-muted-foreground">전부 배치됐어요.</p>
         ) : (
-          data.unassigned.map((g) => <Thumb key={g.garmentId} g={g} />)
+          data.unassigned.map((g) => (
+            <Thumb
+              key={g.garmentId}
+              g={g}
+              selected={selected === g.garmentId}
+              onSelect={toggle}
+            />
+          ))
         )}
       </DropCell>
     </div>
   );
 }
 
-function Thumb({ g }: { g: Item }) {
+function Thumb({
+  g,
+  selected,
+  onSelect,
+}: {
+  g: Item;
+  selected: boolean;
+  onSelect: (id: number) => void;
+}) {
   return (
-    <div
+    <button
+      type="button"
       draggable
       onDragStart={(e) =>
         e.dataTransfer.setData("text/plain", String(g.garmentId))
       }
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect(g.garmentId);
+      }}
       title={g.name ?? "옷"}
-      className="cursor-grab touch-none active:cursor-grabbing"
+      className={cn(
+        "cursor-grab rounded-md ring-offset-2 ring-offset-background active:cursor-grabbing",
+        selected && "ring-2 ring-primary",
+      )}
     >
       {g.thumbnailUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -131,7 +200,7 @@ function Thumb({ g }: { g: Item }) {
       ) : (
         <div className="size-12 rounded-md border bg-muted" />
       )}
-    </div>
+    </button>
   );
 }
 
@@ -139,14 +208,18 @@ function DropCell({
   title,
   hint,
   count,
+  armed,
   onDrop,
+  onTap,
   children,
   wide,
 }: {
   title: string;
   hint?: string;
   count: number;
+  armed: boolean;
   onDrop: (e: React.DragEvent) => void;
+  onTap: () => void;
   children: React.ReactNode;
   wide?: boolean;
 }) {
@@ -154,8 +227,10 @@ function DropCell({
     <div
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
+      onClick={onTap}
       className={cn(
         "min-h-[96px] rounded-lg border border-dashed bg-background/60 p-2.5 transition-colors hover:border-primary/50 hover:bg-accent/40",
+        armed && "cursor-pointer border-primary/50 bg-primary/5",
         wide && "sm:min-h-[120px]",
       )}
     >
