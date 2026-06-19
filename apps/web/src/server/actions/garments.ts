@@ -1,8 +1,41 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { api } from "@/server/api";
 import { auth } from "@/server/auth";
 import { uploadImage } from "@/server/upload";
+
+const STATUSES = ["active", "archived", "donated", "wishlist"] as const;
+type Status = (typeof STATUSES)[number];
+
+/** Inline-edit a garment's basics (name, category·subcategory, season, status). */
+export async function updateGarmentAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user || !process.env.DATABASE_URL) return;
+  const id = Number(formData.get("id"));
+  if (!Number.isFinite(id)) return;
+
+  const name = String(formData.get("name") ?? "").trim();
+  const rawStatus = String(formData.get("status") ?? "active");
+  const status: Status = (STATUSES as readonly string[]).includes(rawStatus)
+    ? (rawStatus as Status)
+    : "active";
+
+  try {
+    await api.garments.update({
+      id,
+      name: name || null,
+      categoryId: Number(formData.get("categoryId")) || null,
+      subcategoryId: Number(formData.get("subcategoryId")) || null,
+      season: formData.getAll("season").map(String).filter(Boolean),
+      status,
+    });
+  } catch {
+    // ignore — revalidate either way
+  }
+  revalidatePath(`/closet/${id}`);
+  revalidatePath("/closet");
+}
 
 export type AddGarmentState = {
   status: "idle" | "ok" | "error";

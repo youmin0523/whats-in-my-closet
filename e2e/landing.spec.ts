@@ -12,6 +12,9 @@ test("landing renders the brand and value proposition", async ({ page }) => {
 });
 
 test("landing visual golden", async ({ page }) => {
+  // Snapshots are platform-specific (font rendering); the committed baseline is
+  // from local dev. Skip on CI to avoid Linux-vs-Windows pixel drift.
+  test.skip(!!process.env.CI, "visual goldens are platform-specific; run locally");
   await page.goto("/");
   // Wait for the self-hosted Pretendard font to settle before snapshotting.
   await page.evaluate(() => document.fonts.ready);

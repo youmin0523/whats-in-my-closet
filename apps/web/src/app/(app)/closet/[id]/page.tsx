@@ -5,6 +5,7 @@ import { auth } from "@/server/auth";
 import { assignLocationAction } from "@/server/actions/assign-location";
 import { logWearAction, setPriceAction } from "@/server/actions/wear";
 import { Button } from "@/components/ui/button";
+import { EditGarmentForm } from "@/components/edit-garment-form";
 
 export default async function GarmentDetailPage({
   params,
@@ -24,6 +25,9 @@ export default async function GarmentDetailPage({
     .similarTo({ garmentId, limit: 6 })
     .catch(() => ({ matches: [] as { garmentId: number; name: string | null; thumbnailUrl: string | null }[] }));
   const closets = await api.locations.closets().catch(() => []);
+  const taxonomy = process.env.DATABASE_URL
+    ? await api.system.taxonomy().catch(() => [])
+    : [];
 
   const attrs = (
     [
@@ -162,6 +166,23 @@ export default async function GarmentDetailPage({
               </form>
             </div>
           </div>
+
+          <details className="mt-4 rounded-lg border bg-secondary/30 p-4">
+            <summary className="cursor-pointer text-sm font-medium">
+              기본 정보 수정
+            </summary>
+            <EditGarmentForm
+              garment={{
+                id: g.id,
+                name: g.name,
+                categoryId: g.categoryId,
+                subcategoryId: g.subcategoryId,
+                season: g.season,
+                status: g.status,
+              }}
+              taxonomy={taxonomy}
+            />
+          </details>
         </div>
       </div>
 

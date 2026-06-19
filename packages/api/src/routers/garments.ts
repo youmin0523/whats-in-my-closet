@@ -240,23 +240,38 @@ export const garmentsRouter = createTRPCRouter({
       return { ok: true };
     }),
 
-  /** Edit basic attributes (name, purchase price, category). */
+  /** Edit attributes (name, brand/size/material, category·subcategory, season, status, price). */
   update: protectedProcedure
     .input(
       z.object({
         id: z.number(),
-        name: z.string().max(120).optional(),
+        name: z.string().max(120).nullable().optional(),
+        brand: z.string().max(80).nullable().optional(),
+        size: z.string().max(40).nullable().optional(),
+        material: z.string().max(160).nullable().optional(),
         purchasePrice: z.number().int().nonnegative().nullable().optional(),
         categoryId: z.number().nullable().optional(),
+        subcategoryId: z.number().nullable().optional(),
+        season: z.array(z.string()).optional(),
+        status: z
+          .enum(["active", "archived", "donated", "wishlist"])
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const db = getDb();
       const set: Partial<typeof garments.$inferInsert> = {};
       if (input.name !== undefined) set.name = input.name;
+      if (input.brand !== undefined) set.brand = input.brand;
+      if (input.size !== undefined) set.size = input.size;
+      if (input.material !== undefined) set.material = input.material;
       if (input.purchasePrice !== undefined)
         set.purchasePrice = input.purchasePrice;
       if (input.categoryId !== undefined) set.categoryId = input.categoryId;
+      if (input.subcategoryId !== undefined)
+        set.subcategoryId = input.subcategoryId;
+      if (input.season !== undefined) set.season = input.season;
+      if (input.status !== undefined) set.status = input.status;
       if (Object.keys(set).length === 0) return { ok: true };
       set.updatedAt = new Date();
       await db

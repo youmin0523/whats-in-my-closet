@@ -71,7 +71,7 @@
 ## tRPC API 표면 (플랜 명세 대비)
 - **garments**: list ✅(카테고리·계절·색상 필터) · byId ✅ · create ✅ · archive ✅ · delete ✅ · readTag ✅ · update ✅ · leastWorn ✅ · list3d ✅
 - **capture**: startBulk ✅(자동태깅→**택소노미 ID 자동분류**) · detect ✅ · commit ✅(문자열→ID 리졸브 + 세부분류·계절 영속)
-- **inventory**: counts ✅ · summary ✅
+- **inventory**: counts ✅(카테고리·세부분류·계절·색상) · **duplicates ✅(중복 콜아웃)** · summary ✅
 - **locations**: closets ✅ · containers ✅ · createCloset/Container ✅ · assign ✅ · find ✅ · **map ✅(2D 드래그 배치도)**
 - **similarity**: checkDuplicate ✅ · similarTo ✅ (searchByPhoto=checkDuplicate로 커버)
 - **outfits**: list ✅ · byId ✅ · create ✅ · addItem ✅ · logWear ✅ (UI 🔌)
@@ -111,6 +111,9 @@ color/CIEDE2000(Sharma 검증) · 중복점수 블렌드 · 기상청 격자 · 
 - **운영 하드닝 라이브러리**(`lib/resilience.ts`, 순수·골든 11): 지수 백오프 **재시도**(4xx 제외, 429/5xx/네트워크 재시도) · **동시성 제한**(`mapWithConcurrency`) · **단일비행 TTL 캐시**. tagging·embeddings·detection에 재시도+캐시 적용, `capture.startBulk`는 동시성 5로 제한(대량 업로드 시 모델 동시호출 폭주·레이트리밋 방지).
 - **수익화 스캐폴드**(freemium): `subscriptions` 테이블(마이그레이션 **0005**) + 플랜 제한 로직(`lib/plan-limits.ts` 순수·골든 7: 무료 100벌·월 트라이온 크레딧) + **`billing` 라우터**(plans·current·subscribe·cancel) + **env-게이팅 결제 서비스**(PortOne/Toss; 키 없으면 즉시 적용 데모, 키 있으면 체크아웃 URL) + **설정/요금제 UI**(`/settings`, 사용량 바·플랜 카드).
 - **상품 카탈로그 엔리치먼트**: `getEnrichmentService`(네이버 쇼핑검색, env-게이팅·재시도·캐시) + 순수 쿼리빌더/타이틀클린(`lib/enrichment-query.ts` 골든 4) + `garments.searchProduct` + **scan-tag 연동**(택 읽기→실제 상품 매칭 카드, 탭하면 자동 채움; 키 없으면 매칭 빈 배열로 기존 흐름 유지).
+- **인벤토리 중복 콜아웃**(플랜 시그니처 비주얼 완성: see-inside 카운터+색상 도넛+**중복 콜아웃** 3종 전부): `inventory.duplicates`(세부분류+색군 ≥2 클러스터, 키 불필요) → "화이트 셔츠 3벌" 칩이 필터 옷장(`/closet?cat&color`)으로 링크.
+- **아이템 인라인 편집**: `garments.update` 확장(이름·카테고리·세부분류·계절·상태) + `EditGarmentForm` + 상세페이지 "기본 정보 수정" 디스클로저.
+- **저장소·CI**: GitHub 공개 저장소 + `README.md`(포트폴리오) + **GitHub Actions CI**(push/PR마다 타입체크·Vitest·빌드·E2E; 비주얼 골든은 OS별이라 CI 자동 스킵).
 
 ## 요약
 - **플랜 핵심(Phase 1–3 + 가상피팅 + 3D) + 위 추가 제품 기능까지 UI·백엔드 구현.** 대부분 키 없이 데모, 키/DB 넣으면 실서비스.

@@ -63,6 +63,10 @@ export default async function InventoryPage() {
     ? await api.garments.leastWorn({ limit: 8 }).catch(() => [])
     : [];
 
+  const duplicates = dbConfigured
+    ? await api.inventory.duplicates().catch(() => [])
+    : [];
+
   const subGroups = new Map<
     string,
     { subKo: string; subSlug: string; items: number }[]
@@ -127,6 +131,38 @@ export default async function InventoryPage() {
               </p>
             </div>
           ))}
+        </div>
+      )}
+
+      {duplicates.length > 0 && (
+        <div className="mt-10 rounded-xl border border-destructive/30 bg-destructive/5 p-5">
+          <h2 className="text-lg font-semibold tracking-tight">중복 주의</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            같은 종류·비슷한 색을 여러 벌 가지고 있어요. 사기 전에 확인하세요.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {duplicates.map((d, i) => {
+              const params = new URLSearchParams();
+              if (d.categorySlug) params.set("cat", d.categorySlug);
+              if (d.family) params.set("color", d.family);
+              return (
+                <Link
+                  key={`${d.subKo}-${d.family}-${i}`}
+                  href={`/closet?${params.toString()}`}
+                  className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1 text-sm transition-colors hover:border-foreground/30"
+                >
+                  <span
+                    className="size-3 rounded-full border"
+                    style={{
+                      backgroundColor: COLOR_HEX[d.family ?? ""] ?? "#cccccc",
+                    }}
+                  />
+                  {COLOR_KO[d.family ?? ""] ?? ""} {d.subKo}{" "}
+                  <b className="tabular-nums">{d.n}벌</b>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       )}
 

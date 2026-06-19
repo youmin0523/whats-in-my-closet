@@ -102,6 +102,43 @@ export const inventoryRouter = createTRPCRouter({
     return { total, byCategory: rows, bySubcategory, bySeason, byColor };
   }),
 
+  /**
+   * Potential-duplicate callout: clusters of active items sharing a subcategory
+   * AND a dominant color family (≥2). Key-free — keys off color_family + subcategory.
+   * Each cluster links to the closet filtered by that category + color.
+   */
+  duplicates: protectedProcedure.query(async ({ ctx }) => {
+    const db = getDb();
+    return db
+      .select({
+        categorySlug: categories.slug,
+        subKo: subcategories.nameKo,
+        family: garmentColors.colorFamily,
+        n: sql<number>`count(distinct ${garments.id})::int`,
+      })
+      .from(garments)
+      .innerJoin(subcategories, eq(subcategories.id, garments.subcategoryId))
+      .leftJoin(categories, eq(categories.id, garments.categoryId))
+      .innerJoin(
+        garmentColors,
+        and(
+          eq(garmentColors.garmentId, garments.id),
+          eq(garmentColors.rank, 0),
+        ),
+      )
+      .where(
+        and(
+          eq(garments.userId, ctx.user.id),
+          eq(garments.status, "active"),
+          isNotNull(garmentColors.colorFamily),
+        ),
+      )
+      .groupBy(categories.slug, subcategories.nameKo, garmentColors.colorFamily)
+      .having(sql`count(distinct ${garments.id}) >= 2`)
+      .orderBy(desc(sql`count(distinct ${garments.id})`))
+      .limit(8);
+  }),
+
   /** Totals grouped by status (active/archived/donated/wishlist). */
   summary: protectedProcedure.query(async ({ ctx }) => {
     const db = getDb();
