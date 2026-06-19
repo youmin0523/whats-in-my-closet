@@ -66,60 +66,75 @@ export function getEmbeddingService(): EmbeddingService {
       // Async create + poll — NOT `Prefer: wait`, whose synchronous path is
       // tightly rate-limited (429 under bulk capture). Plain create + GET poll
       // succeeds even at ratelimit-remaining:0.
-      const vec = await withRetry(async () => {
-        // Create, honoring the create endpoint's rate limit (free tiers allow
-        // ~1 per ratelimit-reset window → 429 under bulk; wait it out).
-        let createRes: Response | null = null;
-        for (let attempt = 0; attempt < 6; attempt++) {
-          const res = await fetch("https://api.replicate.com/v1/predictions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ version, input: { image: imageUrl } }),
-          });
-          if (res.status === 429) {
-            const reset = Number(
-              res.headers.get("ratelimit-reset") ??
-                res.headers.get("retry-after") ??
-                3,
+      const vec = await withRetry(
+        async () => {
+          // Create, honoring the create endpoint's rate limit (free tiers allow
+          // ~1 per ratelimit-reset window → 429 under bulk; wait it out, but
+          // bounded so latency stays near real-time).
+          let createRes: Response | null = null;
+          for (let attempt = 0; attempt < 4; attempt++) {
+            const res = await fetch(
+              "https://api.replicate.com/v1/predictions",
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ version, input: { image: imageUrl } }),
+              },
             );
-            await sleep(Math.min(Math.max(reset, 1) + 1, 15) * 1000);
-            continue;
+            if (res.status === 429) {
+              // honor numeric reset only — an HTTP-date Retry-After parses to
+              // NaN and must not collapse to a 0ms busy-loop.
+              const reset = Number(res.headers.get("ratelimit-reset"));
+              const wait =
+                Number.isFinite(reset) && reset > 0 ? Math.min(reset + 1, 10) : 2;
+              await sleep(wait * 1000);
+              continue;
+            }
+            createRes = res;
+            break;
           }
-          createRes = res;
-          break;
-        }
-        if (!createRes) throw new HttpError("Replicate rate limited", 429);
-        if (!createRes.ok) {
-          throw new HttpError("Replicate embed failed", createRes.status);
-        }
-        let pred = (await createRes.json()) as ReplicatePrediction;
-        const getUrl = pred.urls?.get;
+          if (!createRes) throw new HttpError("Replicate rate limited", 429);
+          if (!createRes.ok) {
+            throw new HttpError("Replicate embed failed", createRes.status);
+          }
+          let pred = (await createRes.json()) as ReplicatePrediction;
+          const getUrl = pred.urls?.get;
 
-        const deadline = Date.now() + 60_000;
-        while (
-          pred.status !== "succeeded" &&
-          pred.status !== "failed" &&
-          pred.status !== "canceled"
-        ) {
-          if (!getUrl) throw new Error("Replicate: no poll URL");
-          if (Date.now() > deadline) throw new Error("Replicate embed timeout");
-          await sleep(1200);
-          const g = await fetch(getUrl, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!g.ok) throw new HttpError("Replicate poll failed", g.status);
-          pred = (await g.json()) as ReplicatePrediction;
-        }
-        if (pred.status !== "succeeded") {
-          throw new Error(`Replicate embed ${pred.status}`);
-        }
-        const raw = parseEmbedding(pred.output);
-        if (!raw.length) throw new Error("Replicate returned no embedding");
-        return l2normalize(raw);
-      });
+          // Poll briskly — clip-embeddings resolves in ~2–4s. Terminal/timeout
+          // throw 4xx-class HttpErrors so withRetry does NOT re-run them (a
+          // genuinely failed prediction or timeout shouldn't restack minutes).
+          const deadline = Date.now() + 30_000;
+          while (
+            pred.status !== "succeeded" &&
+            pred.status !== "failed" &&
+            pred.status !== "canceled"
+          ) {
+            if (!getUrl) throw new HttpError("Replicate: no poll URL", 422);
+            if (Date.now() > deadline) {
+              throw new HttpError("Replicate embed timeout", 422);
+            }
+            await sleep(800);
+            const g = await fetch(getUrl, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!g.ok) throw new HttpError("Replicate poll failed", g.status);
+            pred = (await g.json()) as ReplicatePrediction;
+          }
+          if (pred.status !== "succeeded") {
+            throw new HttpError(`Replicate embed ${pred.status}`, 422);
+          }
+          const raw = parseEmbedding(pred.output);
+          if (!raw.length) {
+            throw new HttpError("Replicate returned no embedding", 422);
+          }
+          return l2normalize(raw);
+        },
+        // fail fast: one quick retry for transient blips, no long restacking
+        { retries: 1, baseMs: 150, maxMs: 1000 },
+      );
       embedCache.set(imageUrl, vec);
       return vec;
     },
