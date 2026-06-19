@@ -6,8 +6,12 @@ import { auth } from "@/server/auth";
 import {
   createClosetAction,
   createContainerAction,
+  deleteClosetAction,
+  deleteContainerAction,
+  renameClosetAction,
 } from "@/server/actions/locations";
 import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/confirm-button";
 
 const inputClass =
   "h-10 rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
@@ -132,15 +136,55 @@ export default async function LocationsPage({
         <div className="mt-4 flex flex-col gap-4">
           {closets.map((c, ci) => (
             <div key={c.id} className="rounded-lg border bg-card p-4">
-              <p className="font-medium">{c.name}</p>
+              <div className="flex items-center justify-between gap-2">
+                <form
+                  action={renameClosetAction}
+                  className="flex flex-1 items-center gap-2"
+                >
+                  <input type="hidden" name="closetId" value={c.id} />
+                  <input
+                    name="name"
+                    defaultValue={c.name}
+                    aria-label="옷장 이름"
+                    className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 font-medium outline-none hover:border-input focus-visible:border-input focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                  <button
+                    type="submit"
+                    className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    이름 저장
+                  </button>
+                </form>
+                <form action={deleteClosetAction}>
+                  <input type="hidden" name="closetId" value={c.id} />
+                  <ConfirmButton message={`'${c.name}' 옷장을 삭제할까요? 안에 둔 옷은 미분류로 돌아갑니다.`}>
+                    옷장 삭제
+                  </ConfirmButton>
+                </form>
+              </div>
+
               {(containersByCloset[ci] ?? []).length > 0 && (
                 <ul className="mt-2 flex flex-wrap gap-2">
                   {(containersByCloset[ci] ?? []).map((ct) => (
                     <li
                       key={ct.id}
-                      className="rounded-full border bg-secondary/50 px-3 py-1 text-xs"
+                      className="flex items-center gap-1.5 rounded-full border bg-secondary/50 py-1 pl-3 pr-1.5 text-xs"
                     >
                       {ct.name}
+                      <form action={deleteContainerAction} className="flex">
+                        <input
+                          type="hidden"
+                          name="containerId"
+                          value={ct.id}
+                        />
+                        <ConfirmButton
+                          message={`'${ct.name}' 칸을 삭제할까요?`}
+                          aria-label="칸 삭제"
+                          className="leading-none"
+                        >
+                          ×
+                        </ConfirmButton>
+                      </form>
                     </li>
                   ))}
                 </ul>

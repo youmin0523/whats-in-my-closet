@@ -116,6 +116,66 @@ export const locationsRouter = createTRPCRouter({
       return closet;
     }),
 
+  renameCloset: protectedProcedure
+    .input(z.object({ closetId: z.number(), name: z.string().min(1).max(40) }))
+    .mutation(async ({ ctx, input }) => {
+      const db = getDb();
+      await db
+        .update(closets)
+        .set({ name: input.name })
+        .where(
+          and(eq(closets.id, input.closetId), eq(closets.userId, ctx.user.id)),
+        );
+      return { ok: true };
+    }),
+
+  /** Delete a closet + its containers; affected garments fall back to unassigned. */
+  deleteCloset: protectedProcedure
+    .input(z.object({ closetId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = getDb();
+      const [owned] = await db
+        .select({ id: closets.id })
+        .from(closets)
+        .where(
+          and(eq(closets.id, input.closetId), eq(closets.userId, ctx.user.id)),
+        );
+      if (!owned) return { ok: false };
+      await db
+        .delete(garmentLocations)
+        .where(eq(garmentLocations.closetId, input.closetId));
+      await db
+        .delete(containers)
+        .where(eq(containers.closetId, input.closetId));
+      await db.delete(closets).where(eq(closets.id, input.closetId));
+      return { ok: true };
+    }),
+
+  /** Delete one container; its garments fall back to closet-level (loose). */
+  deleteContainer: protectedProcedure
+    .input(z.object({ containerId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = getDb();
+      // ownership: the container's closet must belong to the user
+      const [row] = await db
+        .select({ closetId: containers.closetId })
+        .from(containers)
+        .innerJoin(closets, eq(closets.id, containers.closetId))
+        .where(
+          and(
+            eq(containers.id, input.containerId),
+            eq(closets.userId, ctx.user.id),
+          ),
+        );
+      if (!row) return { ok: false };
+      await db
+        .update(garmentLocations)
+        .set({ containerId: null })
+        .where(eq(garmentLocations.containerId, input.containerId));
+      await db.delete(containers).where(eq(containers.id, input.containerId));
+      return { ok: true };
+    }),
+
   assign: protectedProcedure
     .input(
       z.object({
