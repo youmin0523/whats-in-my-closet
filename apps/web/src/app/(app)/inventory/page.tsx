@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { api } from "@/server/api";
@@ -259,12 +260,15 @@ export default async function InventoryPage() {
                 className="overflow-hidden rounded-lg border bg-card transition-colors hover:border-foreground/30"
               >
                 {g.thumbnailUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={g.thumbnailUrl}
-                    alt={g.name ?? "옷"}
-                    className="aspect-square w-full bg-background object-contain p-1"
-                  />
+                  <div className="relative aspect-square w-full bg-background">
+                    <Image
+                      src={g.thumbnailUrl}
+                      alt={g.name ?? "옷"}
+                      fill
+                      sizes="(max-width: 768px) 33vw, 16vw"
+                      className="object-contain p-1"
+                    />
+                  </div>
                 ) : (
                   <div className="aspect-square w-full bg-muted" />
                 )}

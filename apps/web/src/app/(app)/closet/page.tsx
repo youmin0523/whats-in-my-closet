@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { api } from "@/server/api";
@@ -173,15 +174,18 @@ export default async function ClosetPage({
             <Link
               key={g.id}
               href={`/closet/${g.id}`}
-              className="block overflow-hidden rounded-lg border bg-card transition-colors hover:border-foreground/30"
+              className="group block overflow-hidden rounded-lg border bg-card transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-sm"
             >
               {g.thumbnailUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={g.thumbnailUrl}
-                  alt={g.name ?? "옷"}
-                  className="aspect-square w-full bg-background object-contain p-2"
-                />
+                <div className="relative aspect-square w-full bg-background">
+                  <Image
+                    src={g.thumbnailUrl}
+                    alt={g.name ?? "옷"}
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                    className="object-contain p-2"
+                  />
+                </div>
               ) : (
                 <div className="aspect-square w-full bg-muted" />
               )}

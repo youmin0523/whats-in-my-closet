@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { api } from "@/server/api";
@@ -51,12 +52,15 @@ export default async function GarmentDetailPage({
       <div className="mt-6 grid gap-8 md:grid-cols-2">
         <div className="overflow-hidden rounded-xl border bg-card">
           {g.thumbnailUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={g.thumbnailUrl}
-              alt={g.name ?? "옷"}
-              className="aspect-square w-full bg-background object-contain p-4"
-            />
+            <div className="relative aspect-square w-full bg-background">
+              <Image
+                src={g.thumbnailUrl}
+                alt={g.name ?? "옷"}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-contain p-4"
+              />
+            </div>
           ) : (
             <div className="aspect-square w-full bg-muted" />
           )}
@@ -197,12 +201,15 @@ export default async function GarmentDetailPage({
                 className="overflow-hidden rounded-lg border bg-card transition-colors hover:border-foreground/30"
               >
                 {m.thumbnailUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={m.thumbnailUrl}
-                    alt={m.name ?? "옷"}
-                    className="aspect-square w-full bg-background object-contain p-1"
-                  />
+                  <div className="relative aspect-square w-full bg-background">
+                    <Image
+                      src={m.thumbnailUrl}
+                      alt={m.name ?? "옷"}
+                      fill
+                      sizes="(max-width: 768px) 33vw, 16vw"
+                      className="object-contain p-1"
+                    />
+                  </div>
                 ) : (
                   <div className="aspect-square w-full bg-muted" />
                 )}

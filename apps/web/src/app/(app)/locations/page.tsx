@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { api } from "@/server/api";
@@ -90,10 +91,11 @@ export default async function LocationsPage({
                   className="flex items-center gap-3 p-3"
                 >
                   {r.thumbnailUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={r.thumbnailUrl}
                       alt={r.name ?? "옷"}
+                      width={48}
+                      height={48}
                       className="size-12 rounded-md border bg-background object-contain p-1"
                     />
                   ) : (

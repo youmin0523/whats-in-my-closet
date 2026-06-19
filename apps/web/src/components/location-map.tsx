@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useTransition } from "react";
 import { moveGarment } from "@/server/actions/location-map";
 import { cn } from "@/lib/utils";
@@ -190,10 +191,11 @@ function Thumb({
       )}
     >
       {g.thumbnailUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={g.thumbnailUrl}
           alt={g.name ?? "옷"}
+          width={48}
+          height={48}
           className="size-12 rounded-md border bg-background object-contain p-0.5"
           draggable={false}
         />
