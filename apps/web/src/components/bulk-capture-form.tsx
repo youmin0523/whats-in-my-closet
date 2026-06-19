@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { bulkAddAction, type BulkState } from "@/server/actions/bulk";
 import { Button } from "@/components/ui/button";
+import { PhotoInput } from "@/components/photo-input";
 
 const initial: BulkState = {
   status: "idle",
@@ -17,14 +18,7 @@ export function BulkCaptureForm() {
   return (
     <div className="flex flex-col gap-5">
       <form action={action} className="flex flex-col gap-3">
-        <input
-          type="file"
-          name="images"
-          accept="image/*"
-          multiple
-          required
-          className="text-sm file:mr-3 file:rounded-md file:border file:bg-secondary file:px-3 file:py-1.5 file:text-sm"
-        />
+        <PhotoInput name="images" multiple required />
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? "올리는 중…" : "여러 벌 한번에 올리기"}
         </Button>

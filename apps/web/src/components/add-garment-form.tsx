@@ -7,6 +7,7 @@ import {
 } from "@/server/actions/garments";
 import { Button } from "@/components/ui/button";
 import { CameraCapture } from "@/components/camera-capture";
+import { PhotoInput } from "@/components/photo-input";
 
 type Cat = {
   id: number;
@@ -35,13 +36,7 @@ export function AddGarmentForm({ taxonomy = [] }: { taxonomy?: Cat[] }) {
   return (
     <>
       <form action={action} className="flex flex-col gap-4">
-        <input
-          type="file"
-          name="image"
-          accept="image/*"
-          required
-          className="text-sm file:mr-3 file:rounded-md file:border file:bg-secondary file:px-3 file:py-1.5 file:text-sm"
-        />
+        <PhotoInput name="image" required />
         <CameraCapture targetInputName="image" />
         <input name="name" placeholder="이름 (선택)" className={inputClass} />
 

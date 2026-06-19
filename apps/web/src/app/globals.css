@@ -122,5 +122,14 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    /* Korean typography: break lines at word/phrase boundaries (spaces·particles),
+       never mid-word. Long unbreakable tokens (URLs, codes) still wrap. */
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+  /* Long unbreakable strings (emails, hashes, URLs) shown in code/mono shouldn't
+     overflow their container on mobile. */
+  code {
+    overflow-wrap: anywhere;
   }
 }
