@@ -132,10 +132,10 @@ export default async function ClosetPage({
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
             <Link href="/wishlist">위시리스트</Link>
           </Button>
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
             <Link href="/check">중복확인</Link>
           </Button>
           <Button asChild size="sm">
@@ -192,7 +192,7 @@ export default async function ClosetPage({
           >
             {hex ? (
               <span
-                className="size-3 rounded-full border"
+                className="size-3 rounded-full border border-foreground/20"
                 style={{ backgroundColor: hex }}
               />
             ) : null}
@@ -209,15 +209,17 @@ export default async function ClosetPage({
       )}
 
       {items.length === 0 ? (
-        <div className="py-24 text-center">
+        <div className="flex flex-col items-center py-24 text-center">
           <p className="text-muted-foreground">
             {cat || season || color
               ? "조건에 맞는 옷이 없어요."
               : "아직 등록된 옷이 없어요."}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            &lsquo;옷 추가&rsquo;로 첫 옷을 올려보세요.
-          </p>
+          {!(cat || season || color) && (
+            <Button asChild className="mt-4">
+              <Link href="/closet/add">첫 옷 올리기</Link>
+            </Button>
+          )}
         </div>
       ) : (
         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">

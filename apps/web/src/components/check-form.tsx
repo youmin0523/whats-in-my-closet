@@ -1,10 +1,27 @@
 "use client";
 
 import { useActionState } from "react";
-import { checkDuplicateAction, type CheckState } from "@/server/actions/check";
+import {
+  checkDuplicateAction,
+  type CheckMatch,
+  type CheckState,
+} from "@/server/actions/check";
 import { Button } from "@/components/ui/button";
 
 const initial: CheckState = { status: "idle", message: "" };
+
+/** Turn the score breakdown into a plain-language "why it's similar" line. */
+function simReason(m: CheckMatch): string {
+  const p = m.parts;
+  const base = m.verdict === "strong" ? "거의 같아요" : "비슷해요";
+  if (!p) return base;
+  const tags: string[] = [];
+  if (p.simEmb >= 0.7) tags.push("모양");
+  if (p.simColor >= 0.6) tags.push("색");
+  if (p.simCat >= 1) tags.push("같은 종류");
+  else if (p.simCat >= 0.6) tags.push("비슷한 종류");
+  return tags.length ? `${tags.join(" · ")} 비슷` : base;
+}
 
 // Informational tones — not a stop sign. Even a near-duplicate isn't an error;
 // owning multiples (기본템·같은 디자인 다벌) is a valid choice.
@@ -86,7 +103,7 @@ export function CheckForm() {
                         {m.name ?? "이름 없음"}
                       </p>
                       <p className="text-[11px] text-muted-foreground">
-                        {m.verdict === "strong" ? "거의 같아요" : "비슷해요"}
+                        {simReason(m)}
                       </p>
                     </a>
                   ))}

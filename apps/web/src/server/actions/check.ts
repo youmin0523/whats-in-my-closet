@@ -10,6 +10,8 @@ export type CheckMatch = {
   thumbnailUrl: string | null;
   score: number;
   verdict: string;
+  // why it's similar (0..1 each): shape (embedding), color, category
+  parts?: { simEmb: number; simColor: number; simCat: number };
 };
 
 export type CheckState = {

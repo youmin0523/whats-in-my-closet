@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { MapPin } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { api } from "@/server/api";
 import { auth } from "@/server/auth";
@@ -97,8 +98,9 @@ export default async function GarmentDetailPage({
 
           <div className="mt-6 rounded-lg border bg-secondary/30 p-4">
             <p className="text-sm font-medium">위치</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              📍 {g.location?.note ?? "아직 지정 안 됨"}
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="size-3.5 shrink-0" />
+              {g.location?.note ?? "아직 지정 안 됨"}
             </p>
             <form
               action={assignLocationAction}

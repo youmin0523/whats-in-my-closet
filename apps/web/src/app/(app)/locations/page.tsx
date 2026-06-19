@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { MapPin } from "lucide-react";
 import { redirect } from "next/navigation";
 import { api } from "@/server/api";
 import { auth } from "@/server/auth";
@@ -111,8 +112,9 @@ export default async function LocationsPage({
                     <p className="truncate text-sm font-medium">
                       {r.name ?? "이름 없음"}
                     </p>
-                    <p className="truncate text-sm text-muted-foreground">
-                      📍 {r.note ?? "위치 미지정"}
+                    <p className="flex items-center gap-1.5 truncate text-sm text-muted-foreground">
+                      <MapPin className="size-3.5 shrink-0" />
+                      {r.note ?? "위치 미지정"}
                     </p>
                   </div>
                 </li>

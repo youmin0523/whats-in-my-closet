@@ -313,9 +313,11 @@ function Thumb({
         e.stopPropagation();
         onSelect(g.garmentId);
       }}
-      title={g.name ?? "옷"}
+      title={g.name ?? "이름 없는 옷"}
+      aria-label={`${g.name ?? "이름 없는 옷"} — 탭해서 옮기기`}
+      aria-pressed={selected}
       className={cn(
-        "cursor-grab rounded-md ring-offset-2 ring-offset-background active:cursor-grabbing",
+        "cursor-grab rounded-md ring-offset-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing",
         selected && "ring-2 ring-primary",
       )}
     >

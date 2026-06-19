@@ -100,7 +100,7 @@ export async function stylistAnswer(
   if (!hasLlm()) {
     return {
       answer:
-        "AI 스타일리스트는 OPENAI_API_KEY(또는 ANTHROPIC_API_KEY) 설정 후 답변해드려요. 지금은 ‘오늘 추천’을 사용해보세요.",
+        "AI 스타일리스트는 곧 열려요. 지금은 ‘오늘 추천’으로 코디를 받아보세요.",
       garmentIds: [],
     };
   }
