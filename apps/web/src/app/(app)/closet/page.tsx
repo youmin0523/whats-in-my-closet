@@ -152,7 +152,7 @@ export default async function ClosetPage({
             key={slug}
             href={hrefWith({ cat: slug || undefined })}
             className={cn(
-              "rounded-full border px-3 py-1 text-sm transition-colors",
+              "rounded-full border px-3 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
               (cat ?? "") === slug
                 ? "border-primary bg-primary/10 font-medium"
                 : "text-muted-foreground hover:bg-accent",
@@ -168,7 +168,7 @@ export default async function ClosetPage({
             key={slug}
             href={hrefWith({ season: slug || undefined })}
             className={cn(
-              "rounded-full border px-3 py-1 text-xs transition-colors",
+              "rounded-full border px-3 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
               (season ?? "") === slug
                 ? "border-primary bg-primary/10 font-medium"
                 : "text-muted-foreground hover:bg-accent",
@@ -184,7 +184,7 @@ export default async function ClosetPage({
             key={slug || "all"}
             href={hrefWith({ color: slug || undefined })}
             className={cn(
-              "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors",
+              "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
               (color ?? "") === slug
                 ? "border-primary bg-primary/10 font-medium"
                 : "text-muted-foreground hover:bg-accent",
