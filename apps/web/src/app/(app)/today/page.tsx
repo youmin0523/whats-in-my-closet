@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { api } from "@/server/api";
@@ -21,11 +22,10 @@ export default async function TodayPage({
   const lat = Number(sp.lat ?? 37.5665); // Seoul default
   const lng = Number(sp.lng ?? 126.978);
 
+  // Only the (fast) weather blocks the first paint; the slow LLM outfit
+  // recommendation streams in under Suspense so the page feels instant.
   const w = await api.weather.forecast({ lat, lng });
   const dbConfigured = !!process.env.DATABASE_URL;
-  const reco = dbConfigured
-    ? await api.recommendations.today({ lat, lng }).catch(() => null)
-    : null;
 
   const chips = [
     w.constraints.outerWeight === "heavy" && "두꺼운 아우터",
@@ -82,52 +82,9 @@ export default async function TodayPage({
         )}
       </div>
 
-      {reco && reco.outfit.length > 0 ? (
-        <div className="mt-8">
-          {reco.rationale && (
-            <p className="mb-3 text-sm text-muted-foreground">
-              {reco.rationale}
-            </p>
-          )}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {reco.outfit.map((g) => (
-            <div key={g.id} className="overflow-hidden rounded-lg border bg-card">
-              {g.thumbnailUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={g.thumbnailUrl}
-                  alt={g.name ?? "옷"}
-                  className="aspect-square w-full bg-background object-contain p-2"
-                />
-              ) : (
-                <div className="aspect-square w-full bg-muted" />
-              )}
-              <div className="p-2">
-                <p className="truncate text-xs text-muted-foreground">
-                  {g.name ?? "옷"}
-                </p>
-              </div>
-            </div>
-          ))}
-          </div>
-          <form action={saveOutfitAction} className="mt-4">
-            <input
-              type="hidden"
-              name="garmentIds"
-              value={reco.outfit.map((g) => g.id).join(",")}
-            />
-            <Button type="submit" variant="outline" size="sm">
-              이 코디 저장
-            </Button>
-          </form>
-        </div>
-      ) : (
-        <p className="mt-6 rounded-md border bg-secondary/40 p-3 text-sm text-muted-foreground">
-          {dbConfigured
-            ? "옷을 등록하면 오늘 날씨에 맞는 코디를 추천해드려요."
-            : "DB 연결하고 옷을 등록하면, 가진 옷으로 오늘 코디를 추천해드려요."}
-        </p>
-      )}
+      <Suspense fallback={<OutfitSkeleton />}>
+        <TodayOutfit lat={lat} lng={lng} dbConfigured={dbConfigured} />
+      </Suspense>
 
       <div className="mt-8">
         <StylistChat />
@@ -144,6 +101,89 @@ export default async function TodayPage({
           가상 피팅 →
         </Link>
       </div>
+    </div>
+  );
+}
+
+/** Streamed separately — the LLM outfit call is the slow part of the page. */
+async function TodayOutfit({
+  lat,
+  lng,
+  dbConfigured,
+}: {
+  lat: number;
+  lng: number;
+  dbConfigured: boolean;
+}) {
+  const reco = dbConfigured
+    ? await api.recommendations.today({ lat, lng }).catch(() => null)
+    : null;
+
+  if (!reco || reco.outfit.length === 0) {
+    return (
+      <p className="mt-6 rounded-md border bg-secondary/40 p-3 text-sm text-muted-foreground">
+        {dbConfigured
+          ? "옷을 등록하면 오늘 날씨에 맞는 코디를 추천해드려요."
+          : "DB 연결하고 옷을 등록하면, 가진 옷으로 오늘 코디를 추천해드려요."}
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-8">
+      {reco.rationale && (
+        <p className="mb-3 text-sm text-muted-foreground">{reco.rationale}</p>
+      )}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {reco.outfit.map((g) => (
+          <div key={g.id} className="overflow-hidden rounded-lg border bg-card">
+            {g.thumbnailUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={g.thumbnailUrl}
+                alt={g.name ?? "옷"}
+                className="aspect-square w-full bg-background object-contain p-2"
+              />
+            ) : (
+              <div className="aspect-square w-full bg-muted" />
+            )}
+            <div className="p-2">
+              <p className="truncate text-xs text-muted-foreground">
+                {g.name ?? "옷"}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <form action={saveOutfitAction} className="mt-4">
+        <input
+          type="hidden"
+          name="garmentIds"
+          value={reco.outfit.map((g) => g.id).join(",")}
+        />
+        <Button type="submit" variant="outline" size="sm">
+          이 코디 저장
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+function OutfitSkeleton() {
+  return (
+    <div className="mt-8" aria-busy="true">
+      <div className="mb-3 h-4 w-2/3 animate-pulse rounded bg-muted" />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="overflow-hidden rounded-lg border bg-card">
+            <div className="aspect-square w-full animate-pulse bg-muted" />
+            <div className="p-2">
+              <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <span className="sr-only">오늘 코디를 고르는 중…</span>
     </div>
   );
 }
