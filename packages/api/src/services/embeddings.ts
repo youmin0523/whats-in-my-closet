@@ -29,6 +29,23 @@ export interface EmbeddingService {
   embed(imageUrl: string): Promise<number[]>;
 }
 
+type ReplicatePrediction = {
+  status: "starting" | "processing" | "succeeded" | "failed" | "canceled";
+  output: { embedding?: number[] } | number[] | number[][] | null;
+  urls?: { get?: string };
+};
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Pull the 768-dim vector out of either output shape the model may return. */
+function parseEmbedding(out: ReplicatePrediction["output"]): number[] {
+  return Array.isArray(out)
+    ? Array.isArray(out[0])
+      ? (out[0] as number[])
+      : (out as number[])
+    : (out?.embedding ?? []);
+}
+
 export function getEmbeddingService(): EmbeddingService {
   const token = process.env.REPLICATE_API_TOKEN;
   const version = process.env.REPLICATE_FASHION_EMBED_VERSION;
@@ -46,30 +63,60 @@ export function getEmbeddingService(): EmbeddingService {
       const cached = embedCache.get(imageUrl);
       if (cached) return cached;
       // CLIP image embedding via Replicate (768-dim, matches pgvector column).
+      // Async create + poll — NOT `Prefer: wait`, whose synchronous path is
+      // tightly rate-limited (429 under bulk capture). Plain create + GET poll
+      // succeeds even at ratelimit-remaining:0.
       const vec = await withRetry(async () => {
-        const res = await fetch("https://api.replicate.com/v1/predictions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Prefer: "wait",
-          },
-          body: JSON.stringify({ version, input: { image: imageUrl } }),
-        });
-        if (!res.ok) {
-          throw new HttpError("Replicate embed failed", res.status);
+        // Create, honoring the create endpoint's rate limit (free tiers allow
+        // ~1 per ratelimit-reset window → 429 under bulk; wait it out).
+        let createRes: Response | null = null;
+        for (let attempt = 0; attempt < 6; attempt++) {
+          const res = await fetch("https://api.replicate.com/v1/predictions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ version, input: { image: imageUrl } }),
+          });
+          if (res.status === 429) {
+            const reset = Number(
+              res.headers.get("ratelimit-reset") ??
+                res.headers.get("retry-after") ??
+                3,
+            );
+            await sleep(Math.min(Math.max(reset, 1) + 1, 15) * 1000);
+            continue;
+          }
+          createRes = res;
+          break;
         }
-        const json = (await res.json()) as {
-          output: { embedding?: number[] } | number[] | number[][];
-        };
-        const out = json.output;
-        // Accept either { embedding: [...] } (krthr/clip-embeddings) or a flat/
-        // nested array (other embedding models).
-        const raw = Array.isArray(out)
-          ? Array.isArray(out[0])
-            ? (out[0] as number[])
-            : (out as number[])
-          : (out?.embedding ?? []);
+        if (!createRes) throw new HttpError("Replicate rate limited", 429);
+        if (!createRes.ok) {
+          throw new HttpError("Replicate embed failed", createRes.status);
+        }
+        let pred = (await createRes.json()) as ReplicatePrediction;
+        const getUrl = pred.urls?.get;
+
+        const deadline = Date.now() + 60_000;
+        while (
+          pred.status !== "succeeded" &&
+          pred.status !== "failed" &&
+          pred.status !== "canceled"
+        ) {
+          if (!getUrl) throw new Error("Replicate: no poll URL");
+          if (Date.now() > deadline) throw new Error("Replicate embed timeout");
+          await sleep(1200);
+          const g = await fetch(getUrl, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!g.ok) throw new HttpError("Replicate poll failed", g.status);
+          pred = (await g.json()) as ReplicatePrediction;
+        }
+        if (pred.status !== "succeeded") {
+          throw new Error(`Replicate embed ${pred.status}`);
+        }
+        const raw = parseEmbedding(pred.output);
         if (!raw.length) throw new Error("Replicate returned no embedding");
         return l2normalize(raw);
       });

@@ -18,15 +18,17 @@ import { cosineSimilarity, duplicateScoreNoColor } from "../lib/scoring";
  */
 const LIVE = process.env.RUN_LIVE === "1";
 
+// A & B = the SAME garment photo (near-duplicate — the "이미 비슷한 옷 보유"
+// case), C = a clearly different item. Override with your own for a richer test.
 const IMG_A =
   process.env.LIVE_IMG_A ??
-  "https://upload.wikimedia.org/wikipedia/commons/3/3c/Blue_Tshirt.jpg";
+  "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600";
 const IMG_B =
   process.env.LIVE_IMG_B ??
-  "https://upload.wikimedia.org/wikipedia/commons/8/89/Navy_Blue_T-Shirt.jpg";
+  "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=420";
 const IMG_C =
   process.env.LIVE_IMG_C ??
-  "https://upload.wikimedia.org/wikipedia/commons/0/0a/Running_shoe.jpg";
+  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600";
 
 describe.skipIf(!LIVE)("live AI pipeline (real keys)", () => {
   it("tagging returns structured garment tags", async () => {
@@ -49,11 +51,11 @@ describe.skipIf(!LIVE)("live AI pipeline (real keys)", () => {
       "set REPLICATE_API_TOKEN + REPLICATE_FASHION_EMBED_VERSION",
     ).toBe(true);
 
-    const [a, b, c] = await Promise.all([
-      svc.embed(IMG_A),
-      svc.embed(IMG_B),
-      svc.embed(IMG_C),
-    ]);
+    // Sequential, not Promise.all — Replicate low tiers throttle concurrent
+    // predictions (429). One at a time is slower but reliable.
+    const a = await svc.embed(IMG_A);
+    const b = await svc.embed(IMG_B);
+    const c = await svc.embed(IMG_C);
     expect(a).toHaveLength(EMBEDDING_DIM);
 
     const simAB = cosineSimilarity(a, b);
