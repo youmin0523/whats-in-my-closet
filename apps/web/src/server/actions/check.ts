@@ -52,12 +52,15 @@ export async function checkDuplicateAction(
       imageUrl: uploaded.url,
       candidateColors: uploaded.colors.map((c) => c.hex),
     });
+    // Inform with a count, never prescribe — the decision to add is the user's.
+    // (기본템·같은 디자인 다벌 구매처럼 의도된 중복도 있으니 훈수가 아닌 정보로.)
+    const owned = res.matches.filter((m) => m.verdict !== "none").length;
     const message =
       res.verdict === "strong"
-        ? "거의 같은 옷을 이미 가지고 있어요."
+        ? `거의 같은 옷을 이미 ${owned}벌 가지고 있어요.`
         : res.verdict === "soft"
-          ? "비슷한 옷이 있어요. 다시 한 번 생각해보세요."
-          : "비슷한 옷은 없네요. 사도 좋아요.";
+          ? `비슷한 옷이 ${owned}벌 옷장에 있어요.`
+          : "비슷한 옷은 없어요. 새로운 디자인이에요.";
     return {
       status: "ok",
       imageUrl: uploaded.url,

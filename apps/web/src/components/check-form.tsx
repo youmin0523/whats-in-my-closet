@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 
 const initial: CheckState = { status: "idle", message: "" };
 
+// Informational tones — not a stop sign. Even a near-duplicate isn't an error;
+// owning multiples (기본템·같은 디자인 다벌) is a valid choice.
 const verdictTone: Record<string, string> = {
-  strong: "border-destructive/40 bg-destructive/5 text-destructive",
+  strong: "border-primary/50 bg-primary/10 text-foreground",
   soft: "border-primary/30 bg-primary/5 text-foreground",
   none: "border-border bg-secondary/40 text-muted-foreground",
 };
@@ -63,6 +65,19 @@ export function CheckForm() {
                   </p>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* The choice to add is always the user's — basics/같은 디자인 다벌도 OK. */}
+          {state.verdict && state.verdict !== "none" && (
+            <div className="mt-4 flex flex-col gap-2 border-t border-foreground/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm opacity-80">
+                기본템이거나 마음에 든다면 — 여러 벌도 괜찮아요. 결정은 당신
+                몫이에요.
+              </p>
+              <Button asChild size="sm" variant="outline">
+                <a href="/closet/add">그래도 옷장에 추가</a>
+              </Button>
             </div>
           )}
         </div>
