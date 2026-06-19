@@ -5,6 +5,10 @@ import { api } from "@/server/api";
 import { auth } from "@/server/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  OnboardingChecklist,
+  type OnboardingStep,
+} from "@/components/onboarding-checklist";
 
 const CATS: [string, string][] = [
   ["", "전체"],
@@ -63,6 +67,49 @@ export default async function ClosetPage({
     ? await api.garments.list({ category: cat, season, color })
     : [];
 
+  // First-run onboarding state — derived from one map() query (closets,
+  // placements, total garments). Hidden once all three steps are done.
+  let onboarding: OnboardingStep[] | null = null;
+  if (dbConfigured) {
+    const map = await api.locations.map().catch(() => null);
+    if (map) {
+      const placed = map.closets.reduce(
+        (n, c) =>
+          n +
+          c.loose.length +
+          c.containers.reduce((m, ct) => m + ct.garments.length, 0),
+        0,
+      );
+      const totalGarments = placed + map.unassigned.length;
+      onboarding = [
+        {
+          key: "register",
+          label: "첫 옷 등록하기",
+          desc: "사진 한 장이면 자동으로 분류돼요. 여러 벌도 한 번에.",
+          href: "/closet/add",
+          cta: "옷 추가",
+          done: totalGarments > 0,
+        },
+        {
+          key: "build",
+          label: "옷장 모양 짜기",
+          desc: "입면으로 만들면 2D 배치도·3D가 자동 생성돼요.",
+          href: "/locations/build",
+          cta: "옷장 만들기",
+          done: map.closets.length > 0,
+        },
+        {
+          key: "place",
+          label: "옷 위치 정하기",
+          desc: "끌어다 칸에 넣으면 '어디 뒀더라'가 사라져요.",
+          href: "/locations/map",
+          cta: "배치하기",
+          done: placed > 0,
+        },
+      ];
+    }
+  }
+
   // Build a /closet href preserving the other active filters.
   const current: Record<string, string | undefined> = { cat, season, color };
   const hrefWith = (patch: Record<string, string | undefined>) => {
@@ -94,6 +141,8 @@ export default async function ClosetPage({
           </Button>
         </div>
       </div>
+
+      {onboarding && <OnboardingChecklist steps={onboarding} />}
 
       <div className="mt-6 flex flex-wrap gap-2">
         {CATS.map(([slug, label]) => (
