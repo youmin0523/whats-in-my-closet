@@ -1,0 +1,124 @@
+"use client";
+
+import { useActionState, useState } from "react";
+import {
+  addGarmentAction,
+  type AddGarmentState,
+} from "@/server/actions/garments";
+import { Button } from "@/components/ui/button";
+import { CameraCapture } from "@/components/camera-capture";
+
+type Cat = {
+  id: number;
+  slug: string;
+  nameKo: string;
+  subs: { id: number; slug: string; nameKo: string }[];
+};
+
+const initial: AddGarmentState = { status: "idle", message: "" };
+
+const inputClass =
+  "h-10 rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
+const SEASONS = [
+  ["spring", "봄"],
+  ["summer", "여름"],
+  ["fall", "가을"],
+  ["winter", "겨울"],
+] as const;
+
+export function AddGarmentForm({ taxonomy = [] }: { taxonomy?: Cat[] }) {
+  const [state, action, pending] = useActionState(addGarmentAction, initial);
+  const [catId, setCatId] = useState("");
+  const subs = taxonomy.find((c) => String(c.id) === catId)?.subs ?? [];
+
+  return (
+    <>
+      <form action={action} className="flex flex-col gap-4">
+        <input
+          type="file"
+          name="image"
+          accept="image/*"
+          required
+          className="text-sm file:mr-3 file:rounded-md file:border file:bg-secondary file:px-3 file:py-1.5 file:text-sm"
+        />
+        <CameraCapture targetInputName="image" />
+        <input name="name" placeholder="이름 (선택)" className={inputClass} />
+
+        {taxonomy.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              name="categoryId"
+              value={catId}
+              onChange={(e) => setCatId(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">카테고리</option>
+              {taxonomy.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nameKo}
+                </option>
+              ))}
+            </select>
+            <select
+              key={catId}
+              name="subcategoryId"
+              className={inputClass}
+              disabled={subs.length === 0}
+            >
+              <option value="">세부 분류</option>
+              {subs.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nameKo}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+          {SEASONS.map(([val, label]) => (
+            <label key={val} className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                name="season"
+                value={val}
+                className="size-4 accent-primary"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <input type="checkbox" name="wishlist" className="size-4" />
+          위시리스트 (살까 말까 고민중)
+        </label>
+
+        <Button type="submit" size="lg" disabled={pending}>
+          {pending ? "올리는 중…" : "추가"}
+        </Button>
+      </form>
+
+      {state.status !== "idle" && (
+        <div
+          className={
+            state.status === "error"
+              ? "mt-4 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
+              : "mt-4 rounded-md border bg-secondary/40 p-3 text-sm text-muted-foreground"
+          }
+        >
+          <p>{state.message}</p>
+          {state.imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={state.imageUrl}
+              alt="업로드한 옷"
+              className="mt-3 aspect-square w-full rounded-md border bg-background object-contain p-2"
+            />
+          )}
+        </div>
+      )}
+    </>
+  );
+}

@@ -1,0 +1,76 @@
+"use server";
+
+import { api } from "@/server/api";
+import { auth } from "@/server/auth";
+import { uploadImage } from "@/server/upload";
+
+export type CheckMatch = {
+  garmentId: number;
+  name: string | null;
+  thumbnailUrl: string | null;
+  score: number;
+  verdict: string;
+};
+
+export type CheckState = {
+  status: "idle" | "ok" | "error";
+  message: string;
+  imageUrl?: string;
+  verdict?: "strong" | "soft" | "none";
+  topScore?: number;
+  matches?: CheckMatch[];
+};
+
+/** "사기 전에 확인" — score a candidate photo against the user's closet. */
+export async function checkDuplicateAction(
+  _prev: CheckState,
+  formData: FormData,
+): Promise<CheckState> {
+  const session = await auth();
+  if (!session?.user) return { status: "error", message: "로그인이 필요합니다." };
+
+  const file = formData.get("image");
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", message: "이미지를 선택해 주세요." };
+  }
+
+  const uploaded = await uploadImage(file);
+
+  if (!process.env.DATABASE_URL) {
+    return {
+      status: "ok",
+      imageUrl: uploaded.url,
+      verdict: "none",
+      topScore: 0,
+      matches: [],
+      message: "업로드 완료 — DB 연결 후 옷장과 대조해 중복을 찾습니다.",
+    };
+  }
+
+  try {
+    const res = await api.similarity.checkDuplicate({
+      imageUrl: uploaded.url,
+      candidateColors: uploaded.colors.map((c) => c.hex),
+    });
+    const message =
+      res.verdict === "strong"
+        ? "거의 같은 옷을 이미 가지고 있어요."
+        : res.verdict === "soft"
+          ? "비슷한 옷이 있어요. 다시 한 번 생각해보세요."
+          : "비슷한 옷은 없네요. 사도 좋아요.";
+    return {
+      status: "ok",
+      imageUrl: uploaded.url,
+      verdict: res.verdict,
+      topScore: res.topScore,
+      matches: res.matches.slice(0, 6),
+      message,
+    };
+  } catch {
+    return {
+      status: "error",
+      imageUrl: uploaded.url,
+      message: "조회 중 오류가 발생했어요.",
+    };
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "whats-in-my-closet",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "turbo run db:migrate",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,css}\" --ignore-unknown"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.9"
+  }
+}

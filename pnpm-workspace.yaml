@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Allow these native deps to run install/build scripts.
+# They ship/verify prebuilt binaries (libvips for sharp, napi resolver) — safe to build.
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: true

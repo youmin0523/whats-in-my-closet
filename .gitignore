@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+.turbo/
+dist/
+build/
+out/
+
+# Test artifacts
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Local dev image uploads (Cloudinary fallback)
+apps/web/public/uploads/
+
+# Env / secrets (keep .env.example tracked)
+.env
+.env*.local
+.env.development
+.env.production
+
+# Python ML service
+services/ml/.venv/
+services/ml/__pycache__/
+**/__pycache__/
+*.pyc
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log

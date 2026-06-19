@@ -1,0 +1,1 @@
+ALTER TABLE "garments" ADD COLUMN "purchase_price" integer;
