@@ -17,7 +17,14 @@ export function getDb(): PostgresJsDatabase<typeof schema> {
       "DATABASE_URL is not set. Copy .env.example to .env and set it (see HANDOFF.md).",
     );
   }
-  const client = postgres(url, { max: 10 });
+  const client = postgres(url, {
+    // Pool size. Keep small on serverless behind a pooler (set DATABASE_POOL_MAX=1).
+    max: Number(process.env.DATABASE_POOL_MAX ?? "10"),
+    // Transaction-mode poolers (Supabase :6543, PgBouncer, Neon pooler) don't
+    // support prepared statements — set DATABASE_PREPARE=false in production.
+    prepare: process.env.DATABASE_PREPARE !== "false",
+    idle_timeout: Number(process.env.DATABASE_IDLE_TIMEOUT ?? "20"),
+  });
   cached = drizzle(client, { schema, casing: "snake_case" });
   return cached;
 }
