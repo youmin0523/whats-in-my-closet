@@ -16,6 +16,7 @@ export interface Bin3D {
   type?: string | null;
   col?: number | null;
   row?: number | null;
+  sub?: number | null; // horizontal position within a split shelf-level
 }
 export interface Unit3D {
   id: number;
@@ -29,28 +30,53 @@ const FRAME = 0.12;
 const DEPTH = 1.4;
 const UNIT_GAP = 0.9;
 
-/** Resolve a unit's bins into a grid of cells (col × row). */
-function toCells(bins: Bin3D[]) {
+type Cell = {
+  col: number;
+  row: number;
+  sub: number;
+  subCount: number;
+  bin: Bin3D;
+};
+
+/** Resolve a unit's bins into a grid of cells (col × row, with horizontal sub-split). */
+function toCells(bins: Bin3D[]): { cells: Cell[]; cols: number; rows: number } {
   const positioned = bins.filter((b) => b.col != null && b.row != null);
   const extra = bins.filter((b) => b.col == null || b.row == null);
   const extraCol = positioned.length
     ? Math.max(...positioned.map((b) => b.col!)) + 1
     : 0;
-  const cells = [
-    ...positioned.map((b) => ({ col: b.col!, row: b.row!, bin: b })),
-    ...extra.map((b, i) => ({ col: extraCol, row: i, bin: b })),
+  const raw = [
+    ...positioned.map((b) => ({
+      col: b.col!,
+      row: b.row!,
+      sub: b.sub ?? 0,
+      bin: b,
+    })),
+    ...extra.map((b, i) => ({ col: extraCol, row: i, sub: 0, bin: b })),
   ];
-  if (cells.length === 0)
-    cells.push({ col: 0, row: 0, bin: { id: 0, name: "", items: [] } });
+  if (raw.length === 0)
+    raw.push({ col: 0, row: 0, sub: 0, bin: { id: 0, name: "", items: [] } });
+
+  // how many cells share each (col,row) — the horizontal split count
+  const counts = new Map<string, number>();
+  for (const c of raw) {
+    const k = `${c.col}:${c.row}`;
+    counts.set(k, Math.max(counts.get(k) ?? 0, c.sub + 1));
+  }
+  const cells = raw.map((c) => ({
+    ...c,
+    subCount: counts.get(`${c.col}:${c.row}`)!,
+  }));
   const cols = Math.max(1, ...cells.map((c) => c.col + 1));
   const rows = Math.max(1, ...cells.map((c) => c.row + 1));
   return { cells, cols, rows };
 }
 
 /** Item card — stands on a shelf, hangs from a rod, or sits in a cubby. */
-function Cards({ items, baseY }: { items: Item3D[]; baseY: number }) {
-  const shown = items.slice(0, 3);
-  const span = CELL_W - 0.55;
+function Cards({ items, baseY, w }: { items: Item3D[]; baseY: number; w: number }) {
+  const shown = items.slice(0, w > 0.9 ? 3 : 2);
+  const cardW = Math.max(0.16, Math.min(0.3, w - 0.18));
+  const span = w - cardW - 0.1;
   return (
     <>
       {shown.map((it, ci) => {
@@ -61,7 +87,7 @@ function Cards({ items, baseY }: { items: Item3D[]; baseY: number }) {
         return (
           <RoundedBox
             key={it.id}
-            args={[0.3, 0.46, 0.05]}
+            args={[cardW, 0.46, 0.05]}
             radius={0.04}
             position={[ix, baseY, 0.18]}
           >
@@ -74,32 +100,24 @@ function Cards({ items, baseY }: { items: Item3D[]; baseY: number }) {
 }
 
 /** One cell of the elevation, drawn according to its container type. */
-function Cell({
-  bin,
-  cx,
-  cy,
-}: {
-  bin: Bin3D;
-  cx: number;
-  cy: number;
-}) {
+function Cell({ bin, cx, cy, w }: { bin: Bin3D; cx: number; cy: number; w: number }) {
   const type = bin.type ?? "cell";
   const top = cy + CELL_H / 2;
   const bottom = cy - CELL_H / 2;
 
   return (
     <group position={[cx, 0, 0]}>
-      {/* shelf: plank at the bottom, clothes standing on it */}
+      {/* shelf / cubby: plank at the bottom, clothes standing on it */}
       {(type === "shelf" || type === "cell") && (
         <>
           <RoundedBox
-            args={[CELL_W - 0.06, 0.05, DEPTH - 0.15]}
+            args={[w - 0.06, 0.05, DEPTH - 0.15]}
             radius={0.015}
             position={[0, bottom + 0.02, 0]}
           >
             <meshStandardMaterial color="#d8ccb4" roughness={0.85} />
           </RoundedBox>
-          <Cards items={bin.items} baseY={bottom + 0.27} />
+          <Cards items={bin.items} baseY={bottom + 0.27} w={w} />
         </>
       )}
 
@@ -107,28 +125,28 @@ function Cell({
       {type === "rod" && (
         <>
           <mesh position={[0, top - 0.1, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.02, 0.02, CELL_W - 0.2, 12]} />
+            <cylinderGeometry args={[0.02, 0.02, w - 0.2, 12]} />
             <meshStandardMaterial color="#8a8170" metalness={0.4} roughness={0.5} />
           </mesh>
-          <Cards items={bin.items} baseY={top - 0.36} />
+          <Cards items={bin.items} baseY={top - 0.36} w={w} />
         </>
       )}
 
       {/* drawer: a front face with a handle; contents implied */}
       {type === "drawer" && (
-        <RoundedBox
-          args={[CELL_W - 0.12, CELL_H - 0.12, 0.1]}
-          radius={0.03}
-          position={[0, cy, 0.16]}
-        >
-          <meshStandardMaterial color="#cabd9f" roughness={0.8} />
-        </RoundedBox>
-      )}
-      {type === "drawer" && (
-        <mesh position={[0, cy + 0.08, 0.23]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.018, 0.018, CELL_W - 0.5, 10]} />
-          <meshStandardMaterial color="#7a7263" metalness={0.4} roughness={0.5} />
-        </mesh>
+        <>
+          <RoundedBox
+            args={[w - 0.12, CELL_H - 0.12, 0.1]}
+            radius={0.03}
+            position={[0, cy, 0.16]}
+          >
+            <meshStandardMaterial color="#cabd9f" roughness={0.8} />
+          </RoundedBox>
+          <mesh position={[0, cy + 0.08, 0.23]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.018, 0.018, Math.max(0.2, w - 0.5), 10]} />
+            <meshStandardMaterial color="#7a7263" metalness={0.4} roughness={0.5} />
+          </mesh>
+        </>
       )}
 
       {bin.name ? (
@@ -148,7 +166,7 @@ function Unit({ unit, x }: { unit: Unit3D; x: number }) {
   const innerW = cols * CELL_W;
   const innerH = rows * CELL_H;
   const unitW = innerW + FRAME;
-  const colX = (c: number) => -innerW / 2 + CELL_W / 2 + c * CELL_W;
+  const colLeft = (c: number) => -innerW / 2 + c * CELL_W; // left edge of column
   const topRowY = innerH / 2 - CELL_H / 2;
   const rowY = (r: number) => topRowY - r * CELL_H;
   const cy = 0.3; // lift whole unit a touch
@@ -197,9 +215,13 @@ function Unit({ unit, x }: { unit: Unit3D; x: number }) {
         </div>
       </Html>
 
-      {cells.map(({ col, row, bin }) => (
-        <Cell key={bin.id} bin={bin} cx={colX(col)} cy={rowY(row)} />
-      ))}
+      {cells.map((cell) => {
+        const w = CELL_W / cell.subCount;
+        const cx = colLeft(cell.col) + w * (cell.sub + 0.5);
+        return (
+          <Cell key={cell.bin.id} bin={cell.bin} cx={cx} cy={rowY(cell.row)} w={w} />
+        );
+      })}
     </group>
   );
 }
@@ -224,10 +246,12 @@ export function Closet3D({ units, loose }: { units: Unit3D[]; loose: Item3D[] })
             id: 0,
             name: "내 옷장",
             bins: [
-              { id: 0, name: "행거", items: loose.slice(0, 3), type: "rod", col: 0, row: 0 },
-              { id: 1, name: "선반", items: loose.slice(3, 6), type: "shelf", col: 0, row: 1 },
-              { id: 2, name: "선반", items: loose.slice(6, 9), type: "shelf", col: 1, row: 0 },
-              { id: 3, name: "서랍", items: loose.slice(9, 12), type: "drawer", col: 1, row: 1 },
+              { id: 0, name: "행거", items: loose.slice(0, 3), type: "rod", col: 0, row: 0, sub: 0 },
+              { id: 1, name: "선반", items: loose.slice(3, 5), type: "shelf", col: 0, row: 1, sub: 0 },
+              // a horizontally split shelf — two cells share one shelf-level
+              { id: 2, name: "선반", items: loose.slice(5, 7), type: "shelf", col: 1, row: 0, sub: 0 },
+              { id: 3, name: "선반", items: loose.slice(7, 9), type: "shelf", col: 1, row: 0, sub: 1 },
+              { id: 4, name: "서랍", items: loose.slice(9, 12), type: "drawer", col: 1, row: 1, sub: 0 },
             ],
           },
         ];
@@ -245,11 +269,14 @@ export function Closet3D({ units, loose }: { units: Unit3D[]; loose: Item3D[] })
     cursor += w + UNIT_GAP;
     return x;
   });
+  const maxCols = Math.max(...widths.map((w) => w));
 
   const single = rack.length <= 1;
+  // pull the camera back for wide layouts so nothing is cut off
+  const camZ = Math.max(7.2, totalW * 0.95, maxCols * 1.6);
   return (
     <div className="h-[68vh] w-full overflow-hidden rounded-xl border bg-card">
-      <Canvas camera={{ position: [0, 1.1, 7.2], fov: 45 }} dpr={[1, 2]}>
+      <Canvas camera={{ position: [0, 1.1, camZ], fov: 45 }} dpr={[1, 2]}>
         <Suspense fallback={null}>
           <ambientLight intensity={0.75} />
           <directionalLight position={[3, 5, 4]} intensity={1.15} />
@@ -260,7 +287,7 @@ export function Closet3D({ units, loose }: { units: Unit3D[]; loose: Item3D[] })
           <OrbitControls
             enablePan={!single}
             minDistance={3.5}
-            maxDistance={18}
+            maxDistance={24}
             maxPolarAngle={Math.PI / 2}
             autoRotate={single}
             autoRotateSpeed={0.5}

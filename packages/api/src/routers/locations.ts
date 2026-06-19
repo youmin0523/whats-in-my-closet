@@ -72,17 +72,26 @@ export const locationsRouter = createTRPCRouter({
     .input(
       z.object({
         name: z.string().min(1).max(40),
+        // columns → rows (top→bottom) → cells (left→right; a split shelf)
         sections: z
           .array(
-            z.array(
-              z.object({
-                type: z.enum(["shelf", "rod", "drawer", "cell"]),
-                label: z.string().max(20).optional(),
-              }),
-            ),
+            z
+              .array(
+                z
+                  .array(
+                    z.object({
+                      type: z.enum(["shelf", "rod", "drawer", "cell"]),
+                      label: z.string().max(20).optional(),
+                    }),
+                  )
+                  .min(1)
+                  .max(3),
+              )
+              .min(1)
+              .max(20),
           )
           .min(1)
-          .max(6),
+          .max(12),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -103,14 +112,20 @@ export const locationsRouter = createTRPCRouter({
         drawer: "서랍",
         cell: "칸",
       };
-      const rows = input.sections.flatMap((cells, col) =>
-        cells.map((cell, row) => ({
-          closetId: closet.id,
-          type: cell.type,
-          name: cell.label?.trim() || `${col + 1}열 ${KO[cell.type]}${row + 1}`,
-          position: { col, row },
-          sort: col * 100 + row,
-        })),
+      const rows = input.sections.flatMap((rowsInCol, col) =>
+        rowsInCol.flatMap((cells, row) =>
+          cells.map((cell, sub) => ({
+            closetId: closet.id,
+            type: cell.type,
+            name:
+              cell.label?.trim() ||
+              `${col + 1}열 ${KO[cell.type]}${row + 1}${
+                cells.length > 1 ? `-${sub + 1}` : ""
+              }`,
+            position: { col, row, sub },
+            sort: col * 1000 + row * 10 + sub,
+          })),
+        ),
       );
       if (rows.length) await db.insert(containers).values(rows);
       return closet;
@@ -274,7 +289,11 @@ export const locationsRouter = createTRPCRouter({
             id: ct.id,
             name: ct.name,
             type: ct.type,
-            position: ct.position as { col: number; row: number } | null,
+            position: ct.position as {
+              col: number;
+              row: number;
+              sub?: number;
+            } | null,
             garments: byContainer.get(ct.id) ?? [],
           })),
       })),

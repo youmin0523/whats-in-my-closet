@@ -22,78 +22,49 @@ export default async function Closet3DPage() {
   if (!session?.user) redirect("/login");
 
   const dbConfigured = !!process.env.DATABASE_URL;
-  const rows = dbConfigured ? await api.garments.scene3d().catch(() => []) : [];
+  // Structure (closets + ALL containers incl. empty, with position/type) comes
+  // from locations.map; garment dominant colors come from scene3d. Merging both
+  // means a freshly built—but empty—closet still renders its real layout.
+  const [colorRows, map] = await Promise.all([
+    dbConfigured ? api.garments.scene3d().catch(() => []) : [],
+    dbConfigured ? api.locations.map().catch(() => null) : null,
+  ]);
 
-  // Group garments by closet → container; unplaced items go to `loose`.
-  type Bin = {
-    id: number;
-    name: string;
-    items: Item3D[];
-    type?: string | null;
-    col?: number | null;
-    row?: number | null;
-  };
-  type Acc = {
-    id: number;
-    name: string;
-    bins: Map<number, Bin>;
-    looseItems: Item3D[];
-  };
-  const unitMap = new Map<number, Acc>();
-  const loose: Item3D[] = [];
-
-  rows.forEach((r, i) => {
-    const item: Item3D = {
-      id: r.id,
-      label: r.name ?? "옷",
-      color: r.hex ?? PALETTE[i % PALETTE.length]!,
-    };
-    if (r.closetId == null) {
-      loose.push(item);
-      return;
-    }
-    let u = unitMap.get(r.closetId);
-    if (!u) {
-      u = {
-        id: r.closetId,
-        name: r.closetName ?? "옷장",
-        bins: new Map(),
-        looseItems: [],
-      };
-      unitMap.set(r.closetId, u);
-    }
-    if (r.containerId == null) {
-      u.looseItems.push(item);
-      return;
-    }
-    let b = u.bins.get(r.containerId);
-    if (!b) {
-      const pos = r.containerPosition as { col: number; row: number } | null;
-      b = {
-        id: r.containerId,
-        name: r.containerName ?? "칸",
-        items: [],
-        type: r.containerType,
-        col: pos?.col ?? null,
-        row: pos?.row ?? null,
-      };
-      u.bins.set(r.containerId, b);
-    }
-    b.items.push(item);
+  const hexById = new Map<number, string>();
+  colorRows.forEach((r) => {
+    if (r.hex) hexById.set(r.id, r.hex);
+  });
+  let paletteCursor = 0;
+  const toItem = (g: {
+    garmentId: number;
+    name: string | null;
+  }): Item3D => ({
+    id: g.garmentId,
+    label: g.name ?? "옷",
+    color: hexById.get(g.garmentId) ?? PALETTE[paletteCursor++ % PALETTE.length]!,
   });
 
-  const units: Unit3D[] = [...unitMap.values()].map((u) => ({
-    id: u.id,
-    name: u.name,
+  const units: Unit3D[] = (map?.closets ?? []).map((c) => ({
+    id: c.id,
+    name: c.name,
     bins: [
-      ...u.bins.values(),
-      ...(u.looseItems.length
-        ? [{ id: -u.id - 1000, name: "기타", items: u.looseItems }]
+      ...c.containers.map((ct) => ({
+        id: ct.id,
+        name: ct.name,
+        type: ct.type,
+        col: ct.position?.col ?? null,
+        row: ct.position?.row ?? null,
+        sub: ct.position?.sub ?? null,
+        items: ct.garments.map(toItem),
+      })),
+      ...(c.loose.length
+        ? [{ id: -c.id - 1000, name: "기타", items: c.loose.map(toItem) }]
         : []),
     ],
   }));
+  const loose: Item3D[] = (map?.unassigned ?? []).map(toItem);
 
-  // Demo fallback when there's nothing yet.
+  // Demo fallback only when there's truly nothing yet.
   const looseOrDemo: Item3D[] =
     units.length === 0 && loose.length === 0
       ? Array.from({ length: 12 }, (_, i) => ({

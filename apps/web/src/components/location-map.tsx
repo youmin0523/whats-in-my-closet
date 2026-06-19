@@ -14,7 +14,7 @@ type Container = {
   id: number;
   name: string;
   type: string | null;
-  position: { col: number; row: number } | null;
+  position: { col: number; row: number; sub?: number } | null;
   garments: Item[];
 };
 type Closet = {
@@ -80,13 +80,21 @@ export function LocationMap({ data }: { data: MapData }) {
       )}
 
       {data.closets.map((c) => {
-        // Group positioned containers into elevation columns; legacy ones flat.
+        // Group positioned containers into elevation columns → rows → cells
+        // (a row may hold 2–3 cells side by side: a horizontally split shelf).
         const positioned = c.containers.filter((ct) => ct.position);
         const flat = c.containers.filter((ct) => !ct.position);
-        const cols = new Map<number, Container[]>();
+        const cols = new Map<number, Map<number, Container[]>>();
         for (const ct of positioned) {
-          const k = ct.position!.col;
-          (cols.get(k) ?? cols.set(k, []).get(k)!).push(ct);
+          const { col, row } = ct.position!;
+          let rowMap = cols.get(col);
+          if (!rowMap) {
+            rowMap = new Map();
+            cols.set(col, rowMap);
+          }
+          const cell = rowMap.get(row) ?? [];
+          cell.push(ct);
+          rowMap.set(row, cell);
         }
         const colKeys = [...cols.keys()].sort((a, b) => a - b);
 
@@ -96,38 +104,51 @@ export function LocationMap({ data }: { data: MapData }) {
 
             {colKeys.length > 0 && (
               <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
-                {colKeys.map((col) => (
-                  <div
-                    key={col}
-                    className="flex min-w-[120px] flex-1 flex-col gap-1.5 rounded-lg border bg-background/40 p-1.5"
-                  >
-                    {cols
-                      .get(col)!
-                      .sort((a, b) => a.position!.row - b.position!.row)
-                      .map((ct) => (
-                        <ElevCell
-                          key={ct.id}
-                          ct={ct}
-                          armed={armed}
-                          onDrop={onDrop(c.id, ct.id)}
-                          onTap={onTap(c.id, ct.id)}
-                        >
-                          {ct.garments.map((g) => (
-                            <Thumb
-                              key={g.garmentId}
-                              g={g}
-                              selected={selected === g.garmentId}
-                              onSelect={toggle}
-                            />
-                          ))}
-                        </ElevCell>
-                      ))}
-                  </div>
-                ))}
+                {colKeys.map((col) => {
+                  const rowMap = cols.get(col)!;
+                  const rowKeys = [...rowMap.keys()].sort((a, b) => a - b);
+                  return (
+                    <div
+                      key={col}
+                      className="flex min-w-[140px] flex-1 flex-col gap-1.5 rounded-lg border bg-background/40 p-1.5"
+                    >
+                      {rowKeys.map((row) => {
+                        const cells = rowMap
+                          .get(row)!
+                          .sort(
+                            (a, b) =>
+                              (a.position!.sub ?? 0) - (b.position!.sub ?? 0),
+                          );
+                        return (
+                          <div key={row} className="flex gap-1.5">
+                            {cells.map((ct) => (
+                              <ElevCell
+                                key={ct.id}
+                                ct={ct}
+                                armed={armed}
+                                onDrop={onDrop(c.id, ct.id)}
+                                onTap={onTap(c.id, ct.id)}
+                              >
+                                {ct.garments.map((g) => (
+                                  <Thumb
+                                    key={g.garmentId}
+                                    g={g}
+                                    selected={selected === g.garmentId}
+                                    onSelect={toggle}
+                                  />
+                                ))}
+                              </ElevCell>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {(flat.length > 0 || colKeys.length === 0) && (
+            {flat.length > 0 && (
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {flat.map((ct) => (
                   <DropCell
@@ -149,22 +170,37 @@ export function LocationMap({ data }: { data: MapData }) {
                     ))}
                   </DropCell>
                 ))}
+              </div>
+            )}
+
+            {/* Always offer a closet-level drop target for unassigned garments —
+                even when every container is positioned (else loose items have
+                nowhere to live / move out of). */}
+            {(c.loose.length > 0 || c.containers.length === 0) && (
+              <div className="mt-3">
                 <DropCell
                   title="이 옷장"
-                  hint="칸 미지정"
+                  hint="아직 칸을 안 정한 옷"
                   count={c.loose.length}
                   armed={armed}
                   onDrop={onDrop(c.id, null)}
                   onTap={onTap(c.id, null)}
+                  wide
                 >
-                  {c.loose.map((g) => (
-                    <Thumb
-                      key={g.garmentId}
-                      g={g}
-                      selected={selected === g.garmentId}
-                      onSelect={toggle}
-                    />
-                  ))}
+                  {c.loose.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      칸을 탭해 옷을 넣어보세요.
+                    </p>
+                  ) : (
+                    c.loose.map((g) => (
+                      <Thumb
+                        key={g.garmentId}
+                        g={g}
+                        selected={selected === g.garmentId}
+                        onSelect={toggle}
+                      />
+                    ))
+                  )}
                 </DropCell>
               </div>
             )}
@@ -231,7 +267,7 @@ function ElevCell({
       onDrop={onDrop}
       onClick={onTap}
       className={cn(
-        "relative min-h-[58px] rounded-md border bg-secondary/30 p-1.5 transition-colors hover:border-primary/50",
+        "relative min-h-[58px] min-w-0 flex-1 rounded-md border bg-secondary/30 p-1.5 transition-colors hover:border-primary/50",
         armed && "cursor-pointer border-primary/50 bg-primary/5",
       )}
     >
