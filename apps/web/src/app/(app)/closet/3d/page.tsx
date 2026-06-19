@@ -17,9 +17,16 @@ const PALETTE = [
 
 export const metadata = { title: "3D 옷장" };
 
-export default async function Closet3DPage() {
+export default async function Closet3DPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ c?: string }>;
+}) {
   const session = await auth();
   if (!session?.user) redirect("/login");
+
+  const hc = Number((await searchParams).c);
+  const highlightId = hc > 0 ? hc : undefined;
 
   const dbConfigured = !!process.env.DATABASE_URL;
   // Structure (closets + ALL containers incl. empty, with position/type) comes
@@ -94,7 +101,7 @@ export default async function Closet3DPage() {
       </div>
 
       <div className="mt-8">
-        <Closet3D units={units} loose={looseOrDemo} />
+        <Closet3D units={units} loose={looseOrDemo} highlightId={highlightId} />
       </div>
       <p className="mt-3 text-sm text-muted-foreground">
         드래그로 돌려보고, 스크롤로 확대·축소하세요.

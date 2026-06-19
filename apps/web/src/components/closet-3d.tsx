@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Suspense, useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { Html, OrbitControls, RoundedBox } from "@react-three/drei";
 
 export interface Item3D {
@@ -99,11 +99,41 @@ function Cards({ items, baseY, w }: { items: Item3D[]; baseY: number; w: number 
   );
 }
 
-/** One cell of the elevation, drawn according to its container type. */
-function Cell({ bin, cx, cy, w }: { bin: Bin3D; cx: number; cy: number; w: number }) {
+/** One cell of the elevation, drawn according to its container type.
+ *  When `highlight` is set (the searched-for item's home) the drawer slides
+ *  open and a pulsing "여기 있어요" badge + tint draws the eye. */
+function Cell({
+  bin,
+  cx,
+  cy,
+  w,
+  highlight,
+}: {
+  bin: Bin3D;
+  cx: number;
+  cy: number;
+  w: number;
+  highlight: boolean;
+}) {
   const type = bin.type ?? "cell";
   const top = cy + CELL_H / 2;
   const bottom = cy - CELL_H / 2;
+
+  // animated open-amount (0→1) for drawer slide + highlight tint pulse
+  const t = useRef(0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const drawerRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tintRef = useRef<any>(null);
+  useFrame((state, dt) => {
+    const target = highlight ? 1 : 0;
+    t.current += (target - t.current) * Math.min(1, dt * 5);
+    if (drawerRef.current) drawerRef.current.position.z = t.current * 0.7;
+    if (tintRef.current) {
+      const pulse = 0.18 + 0.14 * Math.sin(state.clock.elapsedTime * 4);
+      tintRef.current.material.opacity = t.current * pulse;
+    }
+  });
 
   return (
     <group position={[cx, 0, 0]}>
@@ -132,9 +162,9 @@ function Cell({ bin, cx, cy, w }: { bin: Bin3D; cx: number; cy: number; w: numbe
         </>
       )}
 
-      {/* drawer: a front face with a handle; contents implied */}
+      {/* drawer: a front face with a handle; slides forward when highlighted */}
       {type === "drawer" && (
-        <>
+        <group ref={drawerRef}>
           <RoundedBox
             args={[w - 0.12, CELL_H - 0.12, 0.1]}
             radius={0.03}
@@ -146,7 +176,30 @@ function Cell({ bin, cx, cy, w }: { bin: Bin3D; cx: number; cy: number; w: numbe
             <cylinderGeometry args={[0.018, 0.018, Math.max(0.2, w - 0.5), 10]} />
             <meshStandardMaterial color="#7a7263" metalness={0.4} roughness={0.5} />
           </mesh>
-        </>
+        </group>
+      )}
+
+      {/* highlight tint (any type) — opacity animated in useFrame */}
+      <mesh ref={tintRef} position={[0, cy, DEPTH / 2 + 0.05]}>
+        <planeGeometry args={[w - 0.04, CELL_H - 0.04]} />
+        <meshBasicMaterial
+          color="#5e6a4c"
+          transparent
+          opacity={0}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {highlight && (
+        <Html
+          position={[0, cy + 0.18, DEPTH / 2 + 0.55]}
+          center
+          distanceFactor={11}
+        >
+          <div className="animate-pulse whitespace-nowrap rounded-full bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground shadow">
+            여기 있어요
+          </div>
+        </Html>
       )}
 
       {bin.name ? (
@@ -161,7 +214,15 @@ function Cell({ bin, cx, cy, w }: { bin: Bin3D; cx: number; cy: number; w: numbe
   );
 }
 
-function Unit({ unit, x }: { unit: Unit3D; x: number }) {
+function Unit({
+  unit,
+  x,
+  highlightId,
+}: {
+  unit: Unit3D;
+  x: number;
+  highlightId?: number;
+}) {
   const { cells, cols, rows } = toCells(unit.bins);
   const innerW = cols * CELL_W;
   const innerH = rows * CELL_H;
@@ -219,14 +280,29 @@ function Unit({ unit, x }: { unit: Unit3D; x: number }) {
         const w = CELL_W / cell.subCount;
         const cx = colLeft(cell.col) + w * (cell.sub + 0.5);
         return (
-          <Cell key={cell.bin.id} bin={cell.bin} cx={cx} cy={rowY(cell.row)} w={w} />
+          <Cell
+            key={cell.bin.id}
+            bin={cell.bin}
+            cx={cx}
+            cy={rowY(cell.row)}
+            w={w}
+            highlight={highlightId != null && cell.bin.id === highlightId}
+          />
         );
       })}
     </group>
   );
 }
 
-export function Closet3D({ units, loose }: { units: Unit3D[]; loose: Item3D[] }) {
+export function Closet3D({
+  units,
+  loose,
+  highlightId,
+}: {
+  units: Unit3D[];
+  loose: Item3D[];
+  highlightId?: number;
+}) {
   const rack: Unit3D[] =
     units.length > 0
       ? [
@@ -282,14 +358,14 @@ export function Closet3D({ units, loose }: { units: Unit3D[]; loose: Item3D[] })
           <directionalLight position={[3, 5, 4]} intensity={1.15} />
           <directionalLight position={[-4, 2, 2]} intensity={0.35} />
           {rack.map((u, i) => (
-            <Unit key={u.id} unit={u} x={xs[i]!} />
+            <Unit key={u.id} unit={u} x={xs[i]!} highlightId={highlightId} />
           ))}
           <OrbitControls
             enablePan={!single}
             minDistance={3.5}
             maxDistance={24}
             maxPolarAngle={Math.PI / 2}
-            autoRotate={single}
+            autoRotate={single && highlightId == null}
             autoRotateSpeed={0.5}
           />
         </Suspense>

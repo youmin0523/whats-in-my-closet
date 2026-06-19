@@ -108,7 +108,7 @@ export default async function LocationsPage({
                   ) : (
                     <div className="size-12 rounded-md bg-muted" />
                   )}
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
                       {r.name ?? "이름 없음"}
                     </p>
@@ -117,6 +117,14 @@ export default async function LocationsPage({
                       {r.note ?? "위치 미지정"}
                     </p>
                   </div>
+                  {r.containerId ? (
+                    <Link
+                      href={`/closet/3d?c=${r.containerId}`}
+                      className="shrink-0 rounded-md border px-2.5 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      3D에서 보기
+                    </Link>
+                  ) : null}
                 </li>
               ))}
             </ul>
