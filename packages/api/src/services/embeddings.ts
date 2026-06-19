@@ -2,7 +2,7 @@ import { createTtlCache, HttpError, withRetry } from "../lib/resilience";
 import { hashString, mulberry32 } from "./_hash";
 
 export const EMBEDDING_DIM = 768;
-export const EMBEDDING_MODEL = "marqo-fashionSigLIP";
+export const EMBEDDING_MODEL = "clip-embeddings";
 
 // Embeddings are immutable per image — cache to avoid re-embedding on retries/dupes.
 const embedCache = createTtlCache<number[]>({
@@ -45,7 +45,7 @@ export function getEmbeddingService(): EmbeddingService {
     async embed(imageUrl) {
       const cached = embedCache.get(imageUrl);
       if (cached) return cached;
-      // Marqo-FashionSigLIP image embedding via Replicate.
+      // CLIP image embedding via Replicate (768-dim, matches pgvector column).
       const vec = await withRetry(async () => {
         const res = await fetch("https://api.replicate.com/v1/predictions", {
           method: "POST",
@@ -59,11 +59,19 @@ export function getEmbeddingService(): EmbeddingService {
         if (!res.ok) {
           throw new HttpError("Replicate embed failed", res.status);
         }
-        const json = (await res.json()) as { output: number[] | number[][] };
+        const json = (await res.json()) as {
+          output: { embedding?: number[] } | number[] | number[][];
+        };
         const out = json.output;
-        return l2normalize(
-          Array.isArray(out[0]) ? (out[0] as number[]) : (out as number[]),
-        );
+        // Accept either { embedding: [...] } (krthr/clip-embeddings) or a flat/
+        // nested array (other embedding models).
+        const raw = Array.isArray(out)
+          ? Array.isArray(out[0])
+            ? (out[0] as number[])
+            : (out as number[])
+          : (out?.embedding ?? []);
+        if (!raw.length) throw new Error("Replicate returned no embedding");
+        return l2normalize(raw);
       });
       embedCache.set(imageUrl, vec);
       return vec;
