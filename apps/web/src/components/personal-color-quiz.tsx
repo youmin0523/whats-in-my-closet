@@ -92,7 +92,7 @@ export function PersonalColorQuiz() {
 
       {season && (
         <div className="rounded-lg border bg-card p-5">
-          <p className="text-sm text-muted-foreground">당신의 퍼스널컬러</p>
+          <p className="text-sm text-muted-foreground">내 퍼스널컬러</p>
           <p className="mt-1 text-2xl font-semibold tracking-tight">
             {SEASON_KO[season]}
           </p>

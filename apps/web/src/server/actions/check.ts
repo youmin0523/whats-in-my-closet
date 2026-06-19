@@ -57,10 +57,10 @@ export async function checkDuplicateAction(
     const owned = res.matches.filter((m) => m.verdict !== "none").length;
     const message =
       res.verdict === "strong"
-        ? `거의 같은 옷을 이미 ${owned}벌 가지고 있어요.`
+        ? `거의 똑같은 옷, 벌써 ${owned}벌 있어요.`
         : res.verdict === "soft"
-          ? `비슷한 옷이 ${owned}벌 옷장에 있어요.`
-          : "비슷한 옷은 없어요. 새로운 디자인이에요.";
+          ? `비슷한 옷이 ${owned}벌 있어요.`
+          : "이런 옷은 처음이네요.";
     return {
       status: "ok",
       imageUrl: uploaded.url,

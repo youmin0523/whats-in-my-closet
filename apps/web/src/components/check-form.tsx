@@ -72,11 +72,10 @@ export function CheckForm() {
           {state.verdict && state.verdict !== "none" && (
             <div className="mt-4 flex flex-col gap-2 border-t border-foreground/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm opacity-80">
-                기본템이거나 마음에 든다면 — 여러 벌도 괜찮아요. 결정은 당신
-                몫이에요.
+                기본템이거나 마음에 들면 여러 벌도 괜찮아요.
               </p>
               <Button asChild size="sm" variant="outline">
-                <a href="/closet/add">그래도 옷장에 추가</a>
+                <a href="/closet/add">그래도 추가하기</a>
               </Button>
             </div>
           )}
