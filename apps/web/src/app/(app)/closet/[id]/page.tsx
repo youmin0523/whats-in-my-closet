@@ -198,7 +198,7 @@ export default async function GarmentDetailPage({
               <Link
                 key={m.garmentId}
                 href={`/closet/${m.garmentId}`}
-                className="overflow-hidden rounded-lg border bg-card transition-colors hover:border-foreground/30"
+                className="group overflow-hidden rounded-lg border bg-card transition-colors hover:border-foreground/30"
               >
                 {m.thumbnailUrl ? (
                   <div className="relative aspect-square w-full bg-background">
@@ -213,6 +213,9 @@ export default async function GarmentDetailPage({
                 ) : (
                   <div className="aspect-square w-full bg-muted" />
                 )}
+                <p className="truncate px-2 py-1.5 text-xs text-muted-foreground group-hover:text-foreground">
+                  {m.name ?? "이름 없음"}
+                </p>
               </Link>
             ))}
           </div>

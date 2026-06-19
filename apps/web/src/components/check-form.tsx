@@ -46,27 +46,54 @@ export function CheckForm() {
               유사도 {state.topScore}/100
             </p>
           )}
-          {state.matches && state.matches.length > 0 && (
-            <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
-              {state.matches.map((m) => (
-                <div key={m.garmentId} className="text-center">
-                  {m.thumbnailUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={m.thumbnailUrl}
-                      alt={m.name ?? "옷"}
-                      className="aspect-square w-full rounded-md border bg-background object-contain p-1"
-                    />
-                  ) : (
-                    <div className="aspect-square w-full rounded-md bg-muted" />
-                  )}
-                  <p className="mt-1 text-xs tabular-nums text-muted-foreground">
-                    {m.score}
-                  </p>
+          {(() => {
+            // Show *which* owned clothes are similar — image + name + score,
+            // each linking to its detail page so the user can recognize it.
+            const similar = (state.matches ?? []).filter(
+              (m) => m.verdict !== "none",
+            );
+            if (similar.length === 0) return null;
+            return (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium">
+                  내 옷장에 있는 비슷한 옷
+                </p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {similar.map((m) => (
+                    <a
+                      key={m.garmentId}
+                      href={`/closet/${m.garmentId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group block rounded-lg border bg-background/70 p-2 transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-sm"
+                    >
+                      <div className="relative aspect-square w-full overflow-hidden rounded-md bg-background">
+                        {m.thumbnailUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={m.thumbnailUrl}
+                            alt={m.name ?? "옷"}
+                            className="size-full object-contain p-1"
+                          />
+                        ) : (
+                          <div className="size-full bg-muted" />
+                        )}
+                        <span className="absolute right-1 top-1 rounded-full bg-foreground/80 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-background">
+                          {m.score}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 truncate text-xs font-medium text-foreground">
+                        {m.name ?? "이름 없음"}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {m.verdict === "strong" ? "거의 같아요" : "비슷해요"}
+                      </p>
+                    </a>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            );
+          })()}
 
           {/* The choice to add is always the user's — basics/같은 디자인 다벌도 OK. */}
           {state.verdict && state.verdict !== "none" && (
