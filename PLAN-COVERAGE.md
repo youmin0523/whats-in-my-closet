@@ -64,7 +64,7 @@
 ## Phase 6 — 3D 옷장 시뮬레이션
 | 항목 | 상태 |
 |---|---|
-| **"내 옷장보기" 3D**(`/closet/3d`, R3F, 회전·줌·자동회전) | ✅ (위치 데이터 연동은 후속) |
+| **"내 옷장보기" 3D**(`/closet/3d`, R3F, 회전·줌·자동회전) | ✅ **위치·타입 연동 완료** — 입면(열×행)을 압출, 행거/선반/서랍 구분 렌더 |
 
 ---
 
@@ -114,6 +114,13 @@ color/CIEDE2000(Sharma 검증) · 중복점수 블렌드 · 기상청 격자 · 
 - **인벤토리 중복 콜아웃**(플랜 시그니처 비주얼 완성: see-inside 카운터+색상 도넛+**중복 콜아웃** 3종 전부): `inventory.duplicates`(세부분류+색군 ≥2 클러스터, 키 불필요) → "화이트 셔츠 3벌" 칩이 필터 옷장(`/closet?cat&color`)으로 링크.
 - **아이템 인라인 편집**: `garments.update` 확장(이름·카테고리·세부분류·계절·상태) + `EditGarmentForm` + 상세페이지 "기본 정보 수정" 디스클로저.
 - **저장소·CI**: GitHub 공개 저장소 + `README.md`(포트폴리오) + **GitHub Actions CI**(push/PR마다 타입체크·Vitest·빌드·E2E; 비주얼 골든은 OS별이라 CI 자동 스킵).
+
+### 입면 빌더 + 온보딩 + 운영 라운드 (전부 ✅ · 키 불필요)
+- **입면(elevation) 빌더**(`/locations/build`): 사용자가 옷장 앞면을 열·칸으로 조합(프리셋 5종 + 행거/선반/서랍/칸) → `locations.buildCloset`이 위치(`{col,row}`)·타입 컨테이너 생성 → **2D 배치도는 입면대로, 3D는 자동 압출**(열→x·행→y·타입별 비주얼). "사용자=입면 짜기 / 시스템=3D 모델링".
+- **옷장 관리**: `renameCloset`·`deleteCloset`·`deleteContainer`(소유권 검증, 삭제 시 옷은 미분류로 안전 폴백) + `/locations` 인라인 편집·삭제 UI + `ConfirmButton`(파괴적 액션 가드).
+- **첫 사용자 온보딩**(플랜 #1 리스크 대응): `/closet` 상단 시작 가이드 — `locations.map()` 한 번으로 등록/옷장/배치 3단계 상태 도출, 진행바·CTA, 완료 시 자동 숨김.
+- **상업 품질 패스**: `(app)/error.tsx`·`loading.tsx`·`not-found.tsx`·`global-error.tsx`(브랜드 폴백) + 주요 라우트 11종 `metadata.title`.
+- **라이브 실증 하네스**: `verify.live.test.ts`(`RUN_LIVE=1` opt-in, 평소 skip) — 태깅→임베딩(768d)→코사인→중복점수 실키 검증 + `VERIFY-LIVE.md` 런북.
 
 ## 요약
 - **플랜 핵심(Phase 1–3 + 가상피팅 + 3D) + 위 추가 제품 기능까지 UI·백엔드 구현.** 대부분 키 없이 데모, 키/DB 넣으면 실서비스.
