@@ -10,6 +10,7 @@ import { getDetectionService } from "./detection";
 
 // Force the keyless dev fallbacks regardless of the host machine's env.
 beforeEach(() => {
+  vi.stubEnv("OPENAI_API_KEY", "");
   vi.stubEnv("ANTHROPIC_API_KEY", "");
   vi.stubEnv("REPLICATE_API_TOKEN", "");
   vi.stubEnv("REPLICATE_FASHION_EMBED_VERSION", "");

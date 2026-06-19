@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createTtlCache, HttpError, withRetry } from "../lib/resilience";
+import { createTtlCache, withRetry } from "../lib/resilience";
+import { hasLlm, llmText } from "./llm";
 
 /** Structured attributes auto-extracted from a garment image. */
 export const GarmentTagsSchema = z.object({
@@ -58,10 +59,7 @@ function stripFences(text: string): string {
 }
 
 export function getTaggingService(): TaggingService {
-  const key = process.env.ANTHROPIC_API_KEY;
-  const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
-
-  if (!key) {
+  if (!hasLlm()) {
     return { isReal: false, tag: async () => ({ ...FALLBACK }) };
   }
 
@@ -72,34 +70,13 @@ export function getTaggingService(): TaggingService {
       if (cached) return cached;
       try {
         const tags = await withRetry(async () => {
-          const res = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: {
-              "x-api-key": key,
-              "anthropic-version": "2023-06-01",
-              "content-type": "application/json",
-            },
-            body: JSON.stringify({
-              model,
-              max_tokens: 512,
-              messages: [
-                {
-                  role: "user",
-                  content: [
-                    { type: "image", source: { type: "url", url: imageUrl } },
-                    { type: "text", text: buildPrompt(taxonomyHint) },
-                  ],
-                },
-              ],
-            }),
+          const text = await llmText({
+            prompt: buildPrompt(taxonomyHint),
+            imageUrl,
+            maxTokens: 512,
           });
-          if (!res.ok) throw new HttpError("Anthropic tag failed", res.status);
-          const json = (await res.json()) as {
-            content: Array<{ text?: string }>;
-          };
-          const text = json.content?.[0]?.text ?? "{}";
           const parsed = GarmentTagsSchema.safeParse(
-            JSON.parse(stripFences(text)),
+            JSON.parse(stripFences(text) || "{}"),
           );
           if (!parsed.success) throw new Error("tag parse failed");
           return parsed.data;

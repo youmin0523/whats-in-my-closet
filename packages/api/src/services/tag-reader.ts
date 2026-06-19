@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { hasLlm, llmText } from "./llm";
 
 /** Structured info read from a clothing hangtag / care label. */
 export const TagInfoSchema = z.object({
@@ -39,10 +40,7 @@ export interface TagReaderService {
 /** Reads a clothing tag via Claude vision. Without a key, returns empty fields
  *  so the user can fill them in manually (the flow still works). */
 export function getTagReaderService(): TagReaderService {
-  const key = process.env.ANTHROPIC_API_KEY;
-  const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
-
-  if (!key) {
+  if (!hasLlm()) {
     return { isReal: false, read: async () => ({ ...EMPTY }) };
   }
 
@@ -50,31 +48,9 @@ export function getTagReaderService(): TagReaderService {
     isReal: true,
     async read(imageUrl) {
       try {
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "x-api-key": key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            model,
-            max_tokens: 512,
-            messages: [
-              {
-                role: "user",
-                content: [
-                  { type: "image", source: { type: "url", url: imageUrl } },
-                  { type: "text", text: PROMPT },
-                ],
-              },
-            ],
-          }),
-        });
-        if (!res.ok) return { ...EMPTY };
-        const json = (await res.json()) as { content: Array<{ text?: string }> };
+        const text = await llmText({ prompt: PROMPT, imageUrl, maxTokens: 512 });
         const parsed = TagInfoSchema.safeParse(
-          JSON.parse(stripFences(json.content?.[0]?.text ?? "{}")),
+          JSON.parse(stripFences(text) || "{}"),
         );
         return parsed.success ? parsed.data : { ...EMPTY };
       } catch {

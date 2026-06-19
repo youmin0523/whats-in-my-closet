@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { OutfitConstraints } from "../lib/recommend";
+import { hasLlm, llmModel, llmText } from "./llm";
 
 export interface StylingCandidate {
   id: number;
@@ -48,13 +49,10 @@ function stripFences(text: string): string {
   return text.replace(/```json/gi, "").replace(/```/g, "").trim();
 }
 
-/** LLM styling layer — Claude picks an outfit from owned candidates within the
+/** LLM styling layer — the model picks an outfit from owned candidates within the
  *  hard constraints + personal palette; heuristic fallback without a key. */
 export function getStylingService(): StylingService {
-  const key = process.env.ANTHROPIC_API_KEY;
-  const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
-
-  if (!key) {
+  if (!hasLlm()) {
     return {
       isReal: false,
       suggest: async ({ candidates, constraints }) =>
@@ -71,23 +69,9 @@ export function getStylingService(): StylingService {
 퍼스널 팔레트(hex): ${palette.join(", ") || "없음"}
 보유 후보: ${JSON.stringify(candidates)}`;
       try {
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "x-api-key": key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            model,
-            max_tokens: 400,
-            messages: [{ role: "user", content: prompt }],
-          }),
-        });
-        if (!res.ok) return heuristic(candidates, constraints);
-        const json = (await res.json()) as { content: Array<{ text?: string }> };
+        const text = await llmText({ prompt, maxTokens: 400 });
         const parsed = StylingSchema.safeParse(
-          JSON.parse(stripFences(json.content?.[0]?.text ?? "{}")),
+          JSON.parse(stripFences(text) || "{}"),
         );
         if (!parsed.success) return heuristic(candidates, constraints);
         // keep only ids that are actually owned candidates (no hallucinations)
@@ -99,7 +83,7 @@ export function getStylingService(): StylingService {
             ? valid
             : heuristic(candidates, constraints).garmentIds,
           rationale: parsed.data.rationale,
-          model,
+          model: llmModel(),
         };
       } catch {
         return heuristic(candidates, constraints);
@@ -113,41 +97,26 @@ export async function stylistAnswer(
   question: string,
   candidates: StylingCandidate[],
 ): Promise<{ answer: string; garmentIds: number[] }> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) {
+  if (!hasLlm()) {
     return {
       answer:
-        "AI 스타일리스트는 ANTHROPIC_API_KEY 설정 후 답변해드려요. 지금은 ‘오늘 추천’을 사용해보세요.",
+        "AI 스타일리스트는 OPENAI_API_KEY(또는 ANTHROPIC_API_KEY) 설정 후 답변해드려요. 지금은 ‘오늘 추천’을 사용해보세요.",
       garmentIds: [],
     };
   }
-  const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
   const prompt = `당신은 친근한 패션 스타일리스트입니다. 사용자의 보유 옷만 활용해 한국어로 답하고, 추천한 보유 옷 id를 함께 주세요.
 질문: ${question}
 보유 옷: ${JSON.stringify(candidates)}
 JSON만 출력: {"answer": "한국어 답변", "garmentIds": [추천한 보유 옷 id...]}`;
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 600,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (!res.ok) return { answer: "지금은 답변을 가져오지 못했어요.", garmentIds: [] };
-    const json = (await res.json()) as { content: Array<{ text?: string }> };
-    const text = stripFences(json.content?.[0]?.text ?? "{}");
+    const raw = await llmText({ prompt, maxTokens: 600 });
     const parsed = z
-      .object({ answer: z.string(), garmentIds: z.array(z.number()).default([]) })
-      .safeParse(JSON.parse(text));
-    if (!parsed.success)
-      return { answer: json.content?.[0]?.text ?? "…", garmentIds: [] };
+      .object({
+        answer: z.string(),
+        garmentIds: z.array(z.number()).default([]),
+      })
+      .safeParse(JSON.parse(stripFences(raw) || "{}"));
+    if (!parsed.success) return { answer: raw || "…", garmentIds: [] };
     const ids = parsed.data.garmentIds.filter((id) =>
       candidates.some((c) => c.id === id),
     );
