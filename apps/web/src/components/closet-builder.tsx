@@ -77,7 +77,7 @@ export function ClosetBuilder() {
       {/* elevation editor — the front face of the closet */}
       <div className="rounded-xl border bg-card p-4">
         <p className="mb-3 text-sm text-muted-foreground">
-          입면 — 앞에서 본 옷장. 열마다 위→아래로 칸을 쌓으세요.
+          입면, 앞에서 본 옷장이에요. 열마다 위에서 아래로 칸을 쌓으세요.
         </p>
         <div className="flex gap-3 overflow-x-auto pb-1">
           {sections.map((cells, col) => (
@@ -107,7 +107,7 @@ export function ClosetBuilder() {
                 ))}
                 {cells.length === 0 && (
                   <p className="py-3 text-center text-xs text-muted-foreground">
-                    비어있음
+                    비어 있어요
                   </p>
                 )}
               </div>

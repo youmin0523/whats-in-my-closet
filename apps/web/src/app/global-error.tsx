@@ -30,7 +30,7 @@ export default function GlobalError({
           잠시 문제가 생겼어요
         </h1>
         <p style={{ fontSize: "0.875rem", color: "#6b6557", margin: 0 }}>
-          페이지를 다시 불러와 주세요.
+          페이지를 다시 불러오면 괜찮아질 거예요.
         </p>
         <button
           onClick={() => reset()}

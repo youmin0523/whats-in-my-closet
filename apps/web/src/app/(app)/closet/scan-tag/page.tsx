@@ -19,8 +19,8 @@ export default async function ScanTagPage() {
         택 찍어서 등록
       </h1>
       <p className="mt-2 text-muted-foreground">
-        상품 택·라벨을 찍어 올리면 브랜드·상품명·사이즈·소재를 읽어 자동으로
-        채워드려요. 확인만 하고 등록하세요.
+        상품 택이나 라벨을 찍어 올리면 브랜드, 상품명, 사이즈, 소재를 읽어
+        채워드려요. 확인만 하고 등록하면 끝이에요.
       </p>
       <div className="mt-8">
         <ScanTagForm />

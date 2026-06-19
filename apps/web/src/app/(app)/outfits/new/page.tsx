@@ -29,7 +29,7 @@ export default async function NewOutfitPage() {
         <p className="mt-8 rounded-md border bg-secondary/40 p-3 text-sm text-muted-foreground">
           {dbConfigured
             ? "먼저 옷을 등록하세요."
-            : "DB 연결 + 옷 등록 후 코디를 만들 수 있어요."}
+            : "DB를 연결하고 옷을 등록하면 코디를 만들 수 있어요."}
         </p>
       ) : (
         <form action={createOutfitAction} className="mt-8 flex flex-col gap-4">

@@ -32,7 +32,7 @@ export function DetectCaptureForm() {
       {state.status === "ok" && state.drafts && (
         <form action={commitDetectedAction} className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
-            {state.drafts.length}벌을 찾았어요. 이름을 확인하고 등록하세요.
+            {state.drafts.length}벌을 찾았어요. 이름만 확인하고 등록하면 돼요.
           </p>
           <input
             type="hidden"

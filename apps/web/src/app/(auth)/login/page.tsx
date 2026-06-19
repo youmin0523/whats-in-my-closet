@@ -27,7 +27,7 @@ export default async function LoginPage() {
         옷장 지킴이 시작하기
       </h1>
       <p className="mt-2 text-muted-foreground">
-        내 옷장을 들여다보는 가장 똑똑한 방법.
+        내 옷장, 사진 한 장으로 정리하기.
       </p>
 
       <div className="mt-9 flex flex-col gap-3">
@@ -50,8 +50,8 @@ export default async function LoginPage() {
         {!anySocial && (
           <p className="rounded-md border bg-secondary/40 p-3 text-sm text-muted-foreground">
             소셜 로그인 키가 아직 없어요. 아래 <b>개발 로그인</b>으로 바로
-            둘러볼 수 있습니다. (카카오·네이버·구글 키는 <code>.env</code>에
-            추가)
+            둘러보세요. (카카오·네이버·구글 키는 <code>.env</code>에 넣으면
+            돼요)
           </p>
         )}
 

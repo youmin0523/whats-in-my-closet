@@ -115,7 +115,7 @@ export default async function InventoryPage() {
 
       {!dbConfigured && (
         <p className="mt-6 rounded-md border bg-secondary/40 p-3 text-sm text-muted-foreground">
-          DB 연결 후 실제 수량이 집계됩니다. (HANDOFF.md 참고)
+          DB를 연결하면 실제 수량을 집계해드려요. (HANDOFF.md 참고)
         </p>
       )}
 
@@ -141,7 +141,7 @@ export default async function InventoryPage() {
         <div className="mt-10 rounded-xl border border-destructive/30 bg-destructive/5 p-5">
           <h2 className="text-lg font-semibold tracking-tight">중복 주의</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            같은 종류·비슷한 색을 여러 벌 가지고 있어요. 사기 전에 확인하세요.
+            같은 종류에 비슷한 색을 여러 벌 가지고 있어요. 새로 사기 전에 한번 살펴보세요.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {duplicates.map((d, i) => {
@@ -252,7 +252,7 @@ export default async function InventoryPage() {
         <div className="mt-12 border-t pt-8">
           <h2 className="text-lg font-semibold tracking-tight">잘 안 입는 옷</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            착용이 적은 옷부터. 정리(기부·판매)를 고려해보세요.
+            덜 입은 옷부터 보여드려요. 기부나 판매로 정리하기 좋아요.
           </p>
           <div className="mt-4 grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
             {leastWorn.map((g) => (

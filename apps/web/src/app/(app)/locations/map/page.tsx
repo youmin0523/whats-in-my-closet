@@ -38,7 +38,7 @@ export default async function LocationMapPage() {
 
       {!dbConfigured && (
         <p className="mt-4 rounded-md border bg-secondary/40 p-3 text-sm text-muted-foreground">
-          DB 연결 후 실제 옷·위치가 표시됩니다. (HANDOFF.md 참고)
+          DB를 연결하면 실제 옷과 위치가 보여요. (HANDOFF.md 참고)
         </p>
       )}
 

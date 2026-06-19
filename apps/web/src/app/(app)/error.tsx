@@ -23,7 +23,7 @@ export default function AppError({
         잠시 후 다시 시도해 주세요
       </h1>
       <p className="mt-3 text-sm text-muted-foreground">
-        일시적인 오류일 수 있어요. 다시 시도하거나 옷장으로 돌아가세요.
+        잠깐 멈칫했나 봐요. 다시 시도하거나 옷장으로 돌아가도 돼요.
       </p>
       {error.digest && (
         <p className="mt-2 text-xs text-muted-foreground/70">

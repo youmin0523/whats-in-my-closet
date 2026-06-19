@@ -109,7 +109,7 @@ export default async function Closet3DPage() {
     <div className="mx-auto max-w-5xl px-6 py-12 md:px-10">
       <div className="flex items-end justify-between border-b pb-6">
         <div>
-          <p className="text-sm text-muted-foreground">내 옷장보기</p>
+          <p className="text-sm text-muted-foreground">내 옷장 보기</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">
             3D로 둘러보기
           </h1>
@@ -128,10 +128,10 @@ export default async function Closet3DPage() {
       <p className="mt-3 text-sm text-muted-foreground">
         드래그로 돌려보고, 스크롤로 확대·축소하세요.
         {units.length > 0
-          ? " 옷장·칸별로 실제 위치에 배치돼 있어요."
+          ? " 옷장과 칸별로 실제 위치에 놓여 있어요."
           : hasData
-            ? " 위치를 지정하면 옷장·칸별로 배치됩니다. (지금은 한 칸에 모아 표시)"
-            : " (지금은 예시 — 옷을 등록하고 위치를 지정하면 옷장·칸별로 배치됩니다.)"}
+            ? " 위치를 정하면 옷장과 칸별로 놓여요. 지금은 한 칸에 모아 보여줘요."
+            : " 지금 보이는 건 예시예요. 옷을 등록하고 위치를 정하면 옷장과 칸별로 놓여요."}
       </p>
     </div>
   );

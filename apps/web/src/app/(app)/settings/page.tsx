@@ -40,8 +40,8 @@ export default async function SettingsPage() {
 
       {!dbConfigured && (
         <p className="mt-6 rounded-md border bg-secondary/40 p-3 text-sm text-muted-foreground">
-          DB 연결 후 현재 플랜·사용량이 표시되고 구독을 변경할 수 있어요. 결제는
-          PortOne/Toss 키를 넣으면 활성화됩니다.
+          DB를 연결하면 현재 플랜과 사용량이 보이고 구독도 바꿀 수 있어요. 결제는
+          PortOne/Toss 키를 넣으면 켜져요.
         </p>
       )}
 
@@ -149,8 +149,8 @@ export default async function SettingsPage() {
       </div>
 
       <p className="mt-6 text-xs text-muted-foreground">
-        결제 키(PortOne/Toss) 연결 전에는 ‘선택’ 시 즉시 적용(데모)됩니다. 연결
-        후에는 결제 페이지로 이동합니다.
+        결제 키(PortOne/Toss)를 연결하기 전에는 ‘선택’하면 바로 적용돼요(데모).
+        연결한 뒤에는 결제 페이지로 넘어가요.
       </p>
     </div>
   );

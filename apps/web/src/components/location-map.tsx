@@ -171,14 +171,14 @@ export function LocationMap({ data }: { data: MapData }) {
 
             {c.containers.length === 0 && (
               <p className="mt-2 text-xs text-muted-foreground">
-                칸이 없어요 —{" "}
+                아직 칸이 없어요.{" "}
                 <a
                   href="/locations/build"
                   className="text-primary hover:opacity-80"
                 >
                   입면으로 옷장 만들기
                 </a>
-                에서 구조를 짜보세요.
+에서 구조를 짜보세요.
               </p>
             )}
           </section>
@@ -187,7 +187,7 @@ export function LocationMap({ data }: { data: MapData }) {
 
       <DropCell
         title="미분류"
-        hint="아직 위치가 없는 옷 — 드래그하거나, 탭해서 칸을 고르세요"
+        hint="아직 위치가 없는 옷이에요. 끌어다 놓거나 탭해서 칸을 고르세요"
         count={data.unassigned.length}
         armed={armed}
         onDrop={onDrop(null, null)}

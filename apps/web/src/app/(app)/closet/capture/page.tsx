@@ -20,8 +20,8 @@ export default async function CapturePage() {
         여러 벌 한번에 등록
       </h1>
       <p className="mt-2 text-muted-foreground">
-        기존 옷들을 한 장씩 다 찍기 번거롭죠. 여러 장을 한 번에 올리면 자동으로
-        배경 제거·색상·태깅이 처리됩니다.
+        한 장씩 다 찍기 번거롭죠. 여러 장을 한 번에 올리면 배경 제거와 색상,
+        태깅까지 알아서 처리해요.
       </p>
       <div className="mt-8">
         <BulkCaptureForm />
@@ -32,8 +32,8 @@ export default async function CapturePage() {
           한 장에 여러 벌이 같이?
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          옷장·선반을 한 장 찍으면 AI가 옷을 하나씩 찾아 나눠 줍니다. (인식 키가
-          없으면 한 벌로 처리)
+          옷장이나 선반을 한 장 찍으면 옷을 하나씩 찾아 나눠 줘요. (인식 키가
+          없으면 한 벌로 처리돼요)
         </p>
         <div className="mt-6">
           <DetectCaptureForm />

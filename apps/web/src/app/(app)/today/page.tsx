@@ -125,7 +125,7 @@ export default async function TodayPage({
         <p className="mt-6 rounded-md border bg-secondary/40 p-3 text-sm text-muted-foreground">
           {dbConfigured
             ? "옷을 등록하면 오늘 날씨에 맞는 코디를 추천해드려요."
-            : "DB 연결 + 옷 등록 후, 가진 옷으로 오늘 코디를 추천합니다."}
+            : "DB 연결하고 옷을 등록하면, 가진 옷으로 오늘 코디를 추천해드려요."}
         </p>
       )}
 

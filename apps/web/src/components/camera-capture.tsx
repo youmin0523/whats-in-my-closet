@@ -42,7 +42,7 @@ export function CameraCapture({
         await videoRef.current.play().catch(() => {});
       }
     } catch {
-      setError("카메라를 열 수 없어요. 권한을 확인하거나 파일 선택을 이용하세요.");
+      setError("카메라를 열 수 없어요. 권한을 확인하거나 파일을 직접 골라 주세요.");
     }
   }
 
@@ -127,7 +127,7 @@ export function CameraCapture({
             alt="촬영한 사진"
             className="size-16 rounded border bg-background object-cover"
           />
-          <span className="text-xs text-muted-foreground">촬영 완료 — 그대로 올리거나 다시 찍으세요.</span>
+          <span className="text-xs text-muted-foreground">다 찍었어요. 그대로 올리거나 다시 찍어도 돼요.</span>
         </div>
       )}
     </div>

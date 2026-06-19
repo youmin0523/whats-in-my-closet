@@ -27,8 +27,8 @@ export default async function BuildClosetPage() {
       </div>
 
       <p className="mt-6 text-sm text-muted-foreground">
-        실제 옷장을 앞에서 본 면(입면)으로 만들면 — 2D 배치도는 그대로, 3D
-        시뮬레이션은 자동으로 입체로 그려져요. 프리셋으로 시작해 칸을 더하세요.
+        옷장을 앞에서 본 면(입면)으로 짜면 2D 배치도는 그대로 쓰고, 3D는 입체로
+        그려져요. 프리셋으로 시작해 칸을 더해보세요.
       </p>
 
       <div className="mt-6">

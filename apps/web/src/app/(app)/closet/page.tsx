@@ -95,7 +95,7 @@ export default async function ClosetPage({
         {
           key: "build",
           label: "옷장 모양 짜기",
-          desc: "입면으로 만들면 2D 배치도·3D가 자동 생성돼요.",
+          desc: "입면으로 만들면 2D 배치도와 3D가 바로 만들어져요.",
           href: "/locations/build",
           cta: "옷장 만들기",
           done: map.closets.length > 0,
@@ -203,8 +203,8 @@ export default async function ClosetPage({
 
       {!dbConfigured && (
         <p className="mt-6 rounded-md border bg-secondary/40 p-3 text-sm text-muted-foreground">
-          DB가 아직 연결되지 않았어요. <code>.env</code>에 DATABASE_URL을 넣고
-          마이그레이션하면 옷이 저장·표시됩니다. (HANDOFF.md 참고)
+          아직 DB가 연결되지 않았어요. <code>.env</code>에 DATABASE_URL을 넣고
+          마이그레이션하면 옷이 저장돼요. (HANDOFF.md 참고)
         </p>
       )}
 

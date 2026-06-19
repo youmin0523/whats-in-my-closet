@@ -30,7 +30,7 @@ export default async function WishlistPage() {
         <Link href="/check" className="text-primary hover:opacity-80">
           중복확인
         </Link>
-        으로 비슷한 옷이 이미 있는지 확인하세요.
+        으로 비슷한 옷이 이미 있는지 확인해 보세요.
       </p>
 
       {items.length === 0 ? (

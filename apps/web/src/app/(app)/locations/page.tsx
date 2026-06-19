@@ -79,7 +79,7 @@ export default async function LocationsPage({
 
       {!dbConfigured && (
         <p className="mt-6 rounded-md border bg-secondary/40 p-3 text-sm text-muted-foreground">
-          DB 연결 후 옷마다 위치(옷장·서랍·박스)를 지정하고 검색할 수 있어요.
+          DB를 연결하면 옷마다 위치(옷장·서랍·박스)를 적어두고 찾아볼 수 있어요.
         </p>
       )}
 
@@ -131,7 +131,7 @@ export default async function LocationsPage({
         >
           입면으로 옷장 만들기 →
           <span className="text-xs font-normal text-muted-foreground">
-            2D·3D 자동 생성
+            2D·3D 함께 만들어져요
           </span>
         </Link>
 

@@ -24,7 +24,7 @@ export function PhotoInput({
         사진 선택
       </span>
       <span className="truncate text-muted-foreground">
-        {label || (multiple ? "여러 장 선택 가능" : "선택된 파일 없음")}
+        {label || (multiple ? "여러 장 한꺼번에 골라도 돼요" : "아직 고른 사진이 없어요")}
       </span>
       <input
         type="file"
