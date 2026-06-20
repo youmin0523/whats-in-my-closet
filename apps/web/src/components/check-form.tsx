@@ -7,6 +7,7 @@ import {
   type CheckState,
 } from "@/server/actions/check";
 import { Button } from "@/components/ui/button";
+import { PhotoInput } from "@/components/photo-input";
 
 const initial: CheckState = { status: "idle", message: "" };
 const STAGES = ["사진 올리는 중…", "옷장과 대조하는 중…"];
@@ -51,13 +52,7 @@ export function CheckForm() {
   return (
     <div className="flex flex-col gap-5">
       <form action={action} className="flex flex-col gap-3">
-        <input
-          type="file"
-          name="image"
-          accept="image/*"
-          required
-          className="text-sm file:mr-3 file:rounded-md file:border file:bg-secondary file:px-3 file:py-1.5 file:text-sm"
-        />
+        <PhotoInput name="image" required />
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? STAGES[stage] : "내 옷장과 비교"}
         </Button>

@@ -202,7 +202,8 @@ function Cell({
         </Html>
       )}
 
-      {bin.name ? (
+      {/* hide the name on narrow split sub-cells — labels would overlap */}
+      {bin.name && w >= CELL_W * 0.7 ? (
         <Html position={[0, bottom + 0.04, DEPTH / 2]} center distanceFactor={13}>
           <div className="whitespace-nowrap rounded bg-foreground/70 px-1.5 py-0.5 text-[10px] text-background">
             {bin.name}

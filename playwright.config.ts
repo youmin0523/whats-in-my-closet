@@ -23,5 +23,7 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
+    // E2E verifies the key-free fallback paths — don't load the local root .env.
+    env: { SKIP_ROOT_ENV: "1" },
   },
 });
