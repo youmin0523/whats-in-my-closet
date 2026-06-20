@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Columns2, X } from "lucide-react";
 import { buildClosetAction } from "@/server/actions/build-closet";
 import { Button } from "@/components/ui/button";
 
@@ -158,9 +159,9 @@ export function ClosetBuilder() {
                       disabled={row.length >= MAX_SPLIT}
                       aria-label="좌우로 나누기"
                       title="좌우로 나누기"
-                      className="w-6 shrink-0 rounded border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30"
+                      className="flex w-8 shrink-0 items-center justify-center rounded border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30"
                     >
-                      ⊞
+                      <Columns2 className="size-4" />
                     </button>
                   </div>
                 ))}
@@ -234,10 +235,10 @@ function Cell({ type, onRemove }: { type: CellType; onRemove: () => void }) {
       <button
         type="button"
         onClick={onRemove}
-        aria-label="삭제"
-        className="absolute right-0.5 top-0.5 text-sm leading-none text-muted-foreground hover:text-destructive"
+        aria-label="칸 삭제"
+        className="absolute right-0 top-0 flex size-6 items-center justify-center text-muted-foreground hover:text-destructive"
       >
-        ×
+        <X className="size-3.5" />
       </button>
     </div>
   );
