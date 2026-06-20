@@ -34,20 +34,10 @@ export default async function TodayPage({
   const sp = await searchParams;
   const lat = Number(sp.lat ?? 37.5665); // Seoul default
   const lng = Number(sp.lng ?? 126.978);
-
-  // Only the (fast) weather blocks the first paint; the slow LLM outfit
-  // recommendation streams in under Suspense so the page feels instant.
-  const w = await api.weather.forecast({ lat, lng });
   const dbConfigured = !!process.env.DATABASE_URL;
 
-  const chips = [
-    w.constraints.outerWeight === "heavy" && "두꺼운 아우터",
-    w.constraints.outerWeight === "light" && "가벼운 아우터",
-    w.constraints.outerWeight === "none" && "아우터 불필요",
-    w.constraints.requireRemovableLayer && "탈착 레이어",
-    w.constraints.preferWaterResistant && "방수·어두운 색",
-  ].filter(Boolean) as string[];
-
+  // Nothing blocks the first paint — the page shell renders instantly and both
+  // the weather card and the LLM outfit stream in under their own Suspense.
   return (
     <div className="mx-auto max-w-3xl px-6 py-12 md:px-10">
       <div className="flex items-center justify-between border-b pb-6">
@@ -68,32 +58,9 @@ export default async function TodayPage({
         </div>
       </div>
 
-      <div className="mt-8 rounded-xl border bg-card p-6">
-        <div className="flex items-baseline gap-3">
-          <span className="text-4xl font-semibold tracking-tight tabular-nums">
-            {Math.round(w.forecast.tempMax)}°
-          </span>
-          <span className="text-muted-foreground tabular-nums">
-            / {Math.round(w.forecast.tempMin)}°
-          </span>
-          <span className="ml-auto text-xs text-muted-foreground">
-            {w.source === "kma" ? "기상청" : "예시 데이터"}
-          </span>
-        </div>
-        <p className="mt-3 text-muted-foreground">{w.summary}</p>
-        {chips.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {chips.map((c) => (
-              <span
-                key={c}
-                className="rounded-full border bg-secondary/50 px-3 py-1 text-xs"
-              >
-                {c}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
+      <Suspense fallback={<WeatherSkeleton />}>
+        <TodayWeather lat={lat} lng={lng} />
+      </Suspense>
 
       <Suspense fallback={<OutfitSkeleton />}>
         <TodayOutfit lat={lat} lng={lng} dbConfigured={dbConfigured} />
@@ -114,6 +81,56 @@ export default async function TodayPage({
           가상 피팅 →
         </Link>
       </div>
+    </div>
+  );
+}
+
+/** Streamed weather card (KMA ~2s on a cold cache; cached ~30min after). */
+async function TodayWeather({ lat, lng }: { lat: number; lng: number }) {
+  const w = await api.weather.forecast({ lat, lng });
+  const chips = [
+    w.constraints.outerWeight === "heavy" && "두꺼운 아우터",
+    w.constraints.outerWeight === "light" && "가벼운 아우터",
+    w.constraints.outerWeight === "none" && "아우터 불필요",
+    w.constraints.requireRemovableLayer && "탈착 레이어",
+    w.constraints.preferWaterResistant && "방수·어두운 색",
+  ].filter(Boolean) as string[];
+
+  return (
+    <div className="mt-8 rounded-xl border bg-card p-6">
+      <div className="flex items-baseline gap-3">
+        <span className="text-4xl font-semibold tracking-tight tabular-nums">
+          {Math.round(w.forecast.tempMax)}°
+        </span>
+        <span className="text-muted-foreground tabular-nums">
+          / {Math.round(w.forecast.tempMin)}°
+        </span>
+        <span className="ml-auto text-xs text-muted-foreground">
+          {w.source === "kma" ? "기상청" : "예시 데이터"}
+        </span>
+      </div>
+      <p className="mt-3 text-muted-foreground">{w.summary}</p>
+      {chips.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {chips.map((c) => (
+            <span
+              key={c}
+              className="rounded-full border bg-secondary/50 px-3 py-1 text-xs"
+            >
+              {c}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WeatherSkeleton() {
+  return (
+    <div className="mt-8 rounded-xl border bg-card p-6" aria-busy="true">
+      <div className="h-9 w-28 animate-pulse rounded bg-muted" />
+      <div className="mt-3 h-4 w-2/3 animate-pulse rounded bg-muted" />
     </div>
   );
 }

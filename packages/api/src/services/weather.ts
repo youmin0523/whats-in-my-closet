@@ -1,4 +1,12 @@
 import { latLngToGrid } from "../lib/kma-grid";
+import { createTtlCache } from "../lib/resilience";
+
+// A KMA forecast for a grid cell is identical until the next publish (~3h), so
+// cache it ~30min. Module-level → shared across warm serverless invocations.
+const forecastCache = createTtlCache<Forecast>({
+  ttlMs: 30 * 60 * 1000,
+  max: 500,
+});
 
 export interface Forecast {
   tempMax: number;
@@ -60,8 +68,24 @@ export function getWeatherService(now: () => Date = () => new Date()): WeatherSe
     async forecast(lat, lng) {
       const { nx, ny } = latLngToGrid(lat, lng);
       const { baseDate, baseTime } = kmaBase(now());
-      const base =
-        "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst";
+      return forecastCache.getOrSet(
+        `${nx}:${ny}:${baseDate}:${baseTime}`,
+        () => fetchForecast(key, nx, ny, baseDate, baseTime),
+      );
+    },
+  };
+}
+
+/** One KMA 단기예보 fetch+parse (cached by the caller). */
+async function fetchForecast(
+  key: string,
+  nx: number,
+  ny: number,
+  baseDate: string,
+  baseTime: string,
+): Promise<Forecast> {
+  const base =
+    "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst";
       const params = new URLSearchParams({
         dataType: "JSON",
         numOfRows: "1000",
@@ -102,6 +126,4 @@ export function getWeatherService(now: () => Date = () => new Date()): WeatherSe
         tempMin = Number.isNaN(tmp) ? tempMax - 6 : tmp - 6;
 
       return { tempMax, tempMin, pop, pty, sky, nx, ny, source: "kma" };
-    },
-  };
 }
