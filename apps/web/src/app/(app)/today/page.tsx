@@ -10,6 +10,19 @@ import { saveOutfitAction } from "@/server/actions/outfit";
 
 export const metadata = { title: "오늘 코디" };
 
+const CAT_KO: Record<string, string> = {
+  tops: "상의",
+  bottoms: "하의",
+  outerwear: "아우터",
+  dresses: "원피스",
+  shoes: "신발",
+  socks: "양말",
+  bags: "가방",
+  accessories: "액세서리",
+  headwear: "모자",
+  underwear: "이너웨어",
+};
+
 export default async function TodayPage({
   searchParams,
 }: {
@@ -148,6 +161,11 @@ async function TodayOutfit({
               <div className="aspect-square w-full bg-muted" />
             )}
             <div className="p-2">
+              {g.categorySlug && CAT_KO[g.categorySlug] && (
+                <span className="text-[10px] font-medium text-primary">
+                  {CAT_KO[g.categorySlug]}
+                </span>
+              )}
               <p className="truncate text-xs text-muted-foreground">
                 {g.name ?? "옷"}
               </p>
