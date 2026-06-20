@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   addGarmentAction,
   type AddGarmentState,
@@ -8,6 +8,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { CameraCapture } from "@/components/camera-capture";
 import { PhotoInput } from "@/components/photo-input";
+
+// While the (multi-second AI) save runs, show what's happening so the wait
+// reads as progress, not a freeze — same time, feels faster.
+const STAGES = ["사진 올리는 중…", "AI가 분류하는 중…", "비슷한 옷 찾는 중…"];
 
 type Cat = {
   id: number;
@@ -32,6 +36,20 @@ export function AddGarmentForm({ taxonomy = [] }: { taxonomy?: Cat[] }) {
   const [state, action, pending] = useActionState(addGarmentAction, initial);
   const [catId, setCatId] = useState("");
   const subs = taxonomy.find((c) => String(c.id) === catId)?.subs ?? [];
+
+  // advance the progress label every ~1.3s while saving
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    if (!pending) {
+      setStage(0);
+      return;
+    }
+    const id = setInterval(
+      () => setStage((s) => Math.min(s + 1, STAGES.length - 1)),
+      1300,
+    );
+    return () => clearInterval(id);
+  }, [pending]);
 
   return (
     <>
@@ -97,7 +115,7 @@ export function AddGarmentForm({ taxonomy = [] }: { taxonomy?: Cat[] }) {
         </label>
 
         <Button type="submit" size="lg" disabled={pending}>
-          {pending ? "올리는 중…" : "추가"}
+          {pending ? STAGES[stage] : "추가"}
         </Button>
       </form>
 

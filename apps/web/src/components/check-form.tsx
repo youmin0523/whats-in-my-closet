@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   checkDuplicateAction,
   type CheckMatch,
@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 const initial: CheckState = { status: "idle", message: "" };
+const STAGES = ["사진 올리는 중…", "옷장과 대조하는 중…"];
 
 /** Turn the score breakdown into a plain-language "why it's similar" line. */
 function simReason(m: CheckMatch): string {
@@ -34,6 +35,19 @@ const verdictTone: Record<string, string> = {
 export function CheckForm() {
   const [state, action, pending] = useActionState(checkDuplicateAction, initial);
 
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    if (!pending) {
+      setStage(0);
+      return;
+    }
+    const id = setInterval(
+      () => setStage((s) => Math.min(s + 1, STAGES.length - 1)),
+      1300,
+    );
+    return () => clearInterval(id);
+  }, [pending]);
+
   return (
     <div className="flex flex-col gap-5">
       <form action={action} className="flex flex-col gap-3">
@@ -45,7 +59,7 @@ export function CheckForm() {
           className="text-sm file:mr-3 file:rounded-md file:border file:bg-secondary file:px-3 file:py-1.5 file:text-sm"
         />
         <Button type="submit" size="lg" disabled={pending}>
-          {pending ? "확인 중…" : "내 옷장과 비교"}
+          {pending ? STAGES[stage] : "내 옷장과 비교"}
         </Button>
       </form>
 
