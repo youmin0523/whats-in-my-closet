@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/server/auth";
 import { BulkCaptureForm } from "@/components/bulk-capture-form";
 import { DetectCaptureForm } from "@/components/detect-capture-form";
+import { RegisterModeTabs } from "@/components/register-mode-tabs";
 
 export default async function CapturePage() {
   const session = await auth();
@@ -23,6 +24,9 @@ export default async function CapturePage() {
         한 장씩 다 찍기 번거롭죠. 여러 장을 한 번에 올리면 배경 제거와 색상,
         태깅까지 알아서 처리해요.
       </p>
+      <div className="mt-6">
+        <RegisterModeTabs />
+      </div>
       <div className="mt-8">
         <BulkCaptureForm />
       </div>

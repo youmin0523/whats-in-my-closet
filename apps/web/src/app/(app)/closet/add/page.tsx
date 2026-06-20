@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { api } from "@/server/api";
 import { auth } from "@/server/auth";
 import { AddGarmentForm } from "@/components/add-garment-form";
+import { RegisterModeTabs } from "@/components/register-mode-tabs";
 
 export default async function AddGarmentPage() {
   const session = await auth();
@@ -24,22 +25,11 @@ export default async function AddGarmentPage() {
       <p className="mt-2 text-muted-foreground">
         옷 사진을 올리면 옷장에 추가돼요.
       </p>
-      <div className="mt-8">
-        <AddGarmentForm taxonomy={taxonomy} />
+      <div className="mt-6">
+        <RegisterModeTabs />
       </div>
-      <div className="mt-6 flex flex-col gap-1 text-sm text-muted-foreground">
-        <p>
-          상품 택이 있다면{" "}
-          <Link href="/closet/scan-tag" className="text-primary hover:opacity-80">
-            택 찍어서 등록
-          </Link>
-        </p>
-        <p>
-          기존 옷이 많다면{" "}
-          <Link href="/closet/capture" className="text-primary hover:opacity-80">
-            여러 벌 한번에 등록
-          </Link>
-        </p>
+      <div className="mt-6">
+        <AddGarmentForm taxonomy={taxonomy} />
       </div>
     </div>
   );

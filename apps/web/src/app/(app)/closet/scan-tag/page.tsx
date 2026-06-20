@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/server/auth";
 import { ScanTagForm } from "@/components/scan-tag-form";
+import { RegisterModeTabs } from "@/components/register-mode-tabs";
 
 export default async function ScanTagPage() {
   const session = await auth();
@@ -22,6 +23,9 @@ export default async function ScanTagPage() {
         상품 택이나 라벨을 찍어 올리면 브랜드, 상품명, 사이즈, 소재를 읽어
         채워드려요. 확인만 하고 등록하면 끝이에요.
       </p>
+      <div className="mt-6">
+        <RegisterModeTabs />
+      </div>
       <div className="mt-8">
         <ScanTagForm />
       </div>
