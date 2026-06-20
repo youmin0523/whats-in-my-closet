@@ -32,6 +32,15 @@ const colorInput = z
 export const garmentsRouter = createTRPCRouter({
   /** List the signed-in user's garments (newest first), optional category filter. */
   list: protectedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: "/garments",
+        tags: ["garments"],
+        summary: "내 옷 목록 (카테고리·계절·색상 필터)",
+        protect: true,
+      },
+    })
     .input(
       z
         .object({
@@ -41,6 +50,16 @@ export const garmentsRouter = createTRPCRouter({
           color: z.string().optional(),
         })
         .optional(),
+    )
+    .output(
+      z.array(
+        z.object({
+          id: z.number(),
+          name: z.string().nullable(),
+          thumbnailUrl: z.string().nullable(),
+          categoryId: z.number().nullable(),
+        }),
+      ),
     )
     .query(async ({ ctx, input }) => {
       const db = getDb();

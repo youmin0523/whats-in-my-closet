@@ -1,5 +1,6 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
+import type { OpenApiMeta } from "trpc-to-openapi";
 
 /** Minimal session shape the API needs — structurally compatible with Auth.js. */
 export interface SessionUser {
@@ -28,9 +29,12 @@ export async function createTRPCContext(opts: {
 
 export type Context = Awaited<ReturnType<typeof createTRPCContext>>;
 
-const t = initTRPC.context<Context>().create({
-  transformer: superjson,
-});
+const t = initTRPC
+  .meta<OpenApiMeta>()
+  .context<Context>()
+  .create({
+    transformer: superjson,
+  });
 
 export const createTRPCRouter = t.router;
 export const createCallerFactory = t.createCallerFactory;
