@@ -65,24 +65,23 @@ export default async function ClosetPage({
   const cat = sp.cat;
   const season = sp.season;
   const color = sp.color;
-  const items = dbConfigured
-    ? await api.garments.list({ category: cat, season, color })
-    : [];
+  // Fetch the grid and the onboarding counts concurrently — neither depends on
+  // the other, so they shouldn't run back-to-back.
+  const [items, onbState] = await Promise.all([
+    dbConfigured
+      ? api.garments.list({ category: cat, season, color })
+      : Promise.resolve([]),
+    dbConfigured
+      ? api.locations.onboardingState().catch(() => null)
+      : Promise.resolve(null),
+  ]);
 
-  // First-run onboarding state — derived from one map() query (closets,
-  // placements, total garments). Hidden once all three steps are done.
+  // First-run onboarding state — three cheap COUNT(*)s (not the whole map()
+  // payload), so the post-login landing stays fast even with a big wardrobe.
   let onboarding: OnboardingStep[] | null = null;
-  if (dbConfigured) {
-    const map = await api.locations.map().catch(() => null);
-    if (map) {
-      const placed = map.closets.reduce(
-        (n, c) =>
-          n +
-          c.loose.length +
-          c.containers.reduce((m, ct) => m + ct.garments.length, 0),
-        0,
-      );
-      const totalGarments = placed + map.unassigned.length;
+  {
+    const s = onbState;
+    if (s) {
       onboarding = [
         {
           key: "register",
@@ -90,7 +89,7 @@ export default async function ClosetPage({
           desc: "사진 한 장이면 자동으로 분류돼요. 여러 벌도 한 번에.",
           href: "/closet/add",
           cta: "옷 추가",
-          done: totalGarments > 0,
+          done: s.garments > 0,
         },
         {
           key: "build",
@@ -98,7 +97,7 @@ export default async function ClosetPage({
           desc: "입면으로 만들면 2D 배치도와 3D가 바로 만들어져요.",
           href: "/locations/build",
           cta: "옷장 만들기",
-          done: map.closets.length > 0,
+          done: s.closets > 0,
         },
         {
           key: "place",
@@ -106,7 +105,7 @@ export default async function ClosetPage({
           desc: "끌어다 칸에 넣으면 '어디 뒀더라'가 사라져요.",
           href: "/locations/map",
           cta: "배치하기",
-          done: placed > 0,
+          done: s.placed > 0,
         },
       ];
     }

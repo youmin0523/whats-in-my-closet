@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, eq, ilike, inArray } from "drizzle-orm";
+import { and, eq, ilike, inArray, isNotNull, sql } from "drizzle-orm";
 import {
   closets,
   containers,
@@ -14,6 +14,46 @@ export const locationsRouter = createTRPCRouter({
   closets: protectedProcedure.query(async ({ ctx }) => {
     const db = getDb();
     return db.select().from(closets).where(eq(closets.userId, ctx.user.id));
+  }),
+
+  /** Cheap counts for the /closet onboarding checklist — 3 indexed COUNT(*)
+   *  in parallel, instead of transferring the whole map() payload. */
+  onboardingState: protectedProcedure.query(async ({ ctx }) => {
+    const db = getDb();
+    const count = (q: Promise<{ n: number }[]>) => q.then((r) => r[0]?.n ?? 0);
+    const [garmentCount, closetCount, placedCount] = await Promise.all([
+      count(
+        db
+          .select({ n: sql<number>`count(*)::int` })
+          .from(garments)
+          .where(
+            and(eq(garments.userId, ctx.user.id), eq(garments.status, "active")),
+          ),
+      ),
+      count(
+        db
+          .select({ n: sql<number>`count(*)::int` })
+          .from(closets)
+          .where(eq(closets.userId, ctx.user.id)),
+      ),
+      count(
+        db
+          .select({ n: sql<number>`count(*)::int` })
+          .from(garmentLocations)
+          .innerJoin(garments, eq(garments.id, garmentLocations.garmentId))
+          .where(
+            and(
+              eq(garments.userId, ctx.user.id),
+              isNotNull(garmentLocations.containerId),
+            ),
+          ),
+      ),
+    ]);
+    return {
+      garments: garmentCount,
+      closets: closetCount,
+      placed: placedCount,
+    };
   }),
 
   createCloset: protectedProcedure
